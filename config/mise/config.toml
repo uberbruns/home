@@ -1,3 +1,5 @@
 [tools]
 fzf = "latest"
+node = "lts"
 jq = "latest"
+"npm:figlet" = "latest"
