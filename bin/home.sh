@@ -255,10 +255,10 @@ generate_commit_message() {
         local commit_message
         local claude_stderr
         claude_stderr=$(mktemp)
-        commit_message=$(cat <<EOF | claude --no-cache 2>"$claude_stderr" | head -n 1
+        commit_message=$(cat <<EOF | claude -p 2>"$claude_stderr" | head -n 1
 Based on the following git diff, generate a concise commit message
 (50 characters or less) that describes the changes. Return only the
-commit message, nothing else.
+commit message, nothing else, without any quotation marks.
 
 $diff_output
 EOF
