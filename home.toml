@@ -39,6 +39,11 @@ source = "config/mise/work.toml"
 target = "~/.config/mise/conf.d/work.toml"
 labels = ["work"]
 
+[[mise]]
+source = "config/mise/dev-apple.toml"
+target = "~/.config/mise/conf.d/dev-apple.toml"
+labels = ["dev-apple"]
+
 [[starship]]
 source = "config/starship/starship.toml"
 target = "~/.config/starship.toml"

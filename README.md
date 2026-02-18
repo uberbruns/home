@@ -140,6 +140,15 @@ Press hyper+`space` between apps to force a split between tiles of the same app.
 
 If only one app is queued, it is focused or launched without any layout being applied.
 
+| Keys | Result |
+|------|--------|
+| `nn` | Focus or launch Notion |
+| `e` `t` | VS Code and Ghostty side by side, equal width |
+| `e` `t` `w` | VS Code, Ghostty, and Safari in three equal columns |
+| `e` `e` | VS Code full width |
+| `nn` `space` `nn` | Two Notion windows side by side, equal width |
+| `e` `space` `e` `t` | Two VS Code windows in equal left columns, Ghostty on the right |
+
 ### Window Positioning
 
 Manual window placement with hyper+number (positions are `x-offset, width` as fractions of screen width):
@@ -147,9 +156,9 @@ Manual window placement with hyper+number (positions are `x-offset, width` as fr
 | Key | Position |
 |-----|----------|
 | `1` | Left 25% |
-| `2` | Middle 75% (from 25%) |
+| `2` | Right 75% |
 | `3` | Left 33% |
-| `4` | Middle 33% |
+| `4` | Right 67% |
 | `5` | Left 50% |
 | `6` | Right 50% |
 | `7` | Left 67% |
