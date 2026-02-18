@@ -23,6 +23,7 @@ COLOR_BLUE='\033[34m'
 #==================================================
 
 echo_h1() {
+    echo ""
     echo -e "${COLOR_BOLD}${COLOR_CYAN}# $1${COLOR_RESET}"
     echo ""
 }
