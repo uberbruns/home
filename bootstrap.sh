@@ -26,3 +26,5 @@ elif [[ "$OS" == "Linux" ]]; then
 fi
 
 mise settings experimental=true
+
+~/.home/bin/home.sh install

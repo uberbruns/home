@@ -52,4 +52,3 @@ labels = ["macos", "dev-apple"]
 [test]
 target = "~/.test"
 labels = ["test"]
-

@@ -51,3 +51,4 @@ keybind = super+shift+z=unbind
 #                           /___/           /___/
 
 keybind = performable:super+c=copy_to_clipboard
+keybind = performable:super+v=paste_from_clipboard
