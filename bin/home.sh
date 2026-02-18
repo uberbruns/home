@@ -350,7 +350,7 @@ update_system() {
     pull_changes
 
     echo_h1 "Installing tools"
-    mise trust --yes --silent
+    mise trust --yes --silent --all
     mise install
     echo -e "${COLOR_GREEN}mise install complete${COLOR_RESET}"
 
