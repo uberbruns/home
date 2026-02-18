@@ -164,7 +164,7 @@ Manual window placement with hyper+number (positions are `x-offset, width` as fr
 | `7` | Left 67% |
 | `8` | Right 33% |
 | `9` | Left 75% |
-| `0` | Right 75% |
+| `0` | Right 25% |
 | `ß` | Full width |
 | `` ´ `` | Move to next screen (maximized) |
 | `delete` | Cycle windows of the current app |
