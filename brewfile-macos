@@ -1,0 +1,6 @@
+brew "dasel"
+brew "fish"
+brew "mise"
+brew "starship"
+cask "ghostty"
+cask "hammerspoon"

@@ -1,0 +1,20 @@
+[hammerspoon]
+target = "~/.hammerspoon"
+labels = ["macos"]
+
+[fish]
+target = "~/.config/fish"
+labels = [["macos", "linux"], "dev"]
+
+[[ghostty]]
+target = "~/Library/Application Support/com.mitchellh.ghostty"
+labels = ["macos", "dev"]
+
+[[ghostty]]
+target = "~/.config/ghostty"
+labels = ["linux", "dev"]
+
+[test]
+target = "~/.test"
+labels = ["test"]
+
