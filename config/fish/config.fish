@@ -1,5 +1,42 @@
+#==================================================
+# Path
+#==================================================
+
+fish_add_path /.npm-global/bin
+fish_add_path /Users/prefect/.local/bin
+fish_add_path /opt/homebrew/bin
+
+#==================================================
+# Tools
+#==================================================
+
+starship init fish | source
+mise activate fish | source
+
+#==================================================
+# Environment
+#==================================================
+
+export EDITOR="code"
+export VISUAL="code"
+
+#==================================================
+# Aliases
+#==================================================
+
+if test (whoami) = prefect
+  alias brew="sudo -i -u karsten brew"
+end
+alias ai="claude -p"
+alias home="~/.home/bin/home.sh"
+
+#==================================================
+# Interactive
+#==================================================
+
 if status is-interactive
 
+  # Cursor shapes
   set -U fish_greeting ''
   set -U fish_cursor_external block
   set -U fish_cursor_default block
@@ -7,9 +44,10 @@ if status is-interactive
   set -U fish_cursor_replace_one underscore
   set -U fish_cursor_visual block
 
-
+  # fzf key bindings
   fzf_configure_bindings --directory=super-f --git_log=super-l --git_status=super-s --history=super-r --processes=super-p --variables=super-v
 
+  # natural-selection key bindings
   if functions --query _natural_selection
     bind escape            '_natural_selection end-selection'
     bind ctrl-r            '_natural_selection history-pager'
@@ -41,20 +79,5 @@ if status is-interactive
     bind super-shift-z     '_natural_selection redo'
     bind ''                kill-selection end-selection self-insert
   end
+
 end
-
-export EDITOR="code"
-export VISUAL="code"
-
-if test (whoami) = prefect
-  alias brew="sudo -i -u karsten brew"
-end
-alias ai="claude -p"
-alias home="~/.home/bin/home.sh"
-
-fish_add_path /.npm-global/bin
-fish_add_path /Users/prefect/.local/bin
-fish_add_path /opt/homebrew/bin
-
-starship init fish | source
-mise activate fish | source
