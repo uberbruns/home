@@ -1,2 +1,2 @@
-config.toml
-.claude/settings.local.json
+/config.toml
+/.claude/settings.local.json

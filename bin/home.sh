@@ -169,6 +169,7 @@ process_entry() {
 
     # Skip if source doesn't exist
     if [[ ! -e "$source_path" ]]; then
+        echo -e "[${COLOR_CYAN}$table${COLOR_RESET}] ${COLOR_YELLOW}Source not found${COLOR_RESET} -> $source_path" >&2
         return 1
     fi
 
