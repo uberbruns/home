@@ -6,9 +6,10 @@ My personal dotfiles. Configs are stored here and symlinked onto the system. A l
 
 ```sh
 git clone <repo> ~/.home
-cp ~/.home/config.example.toml ~/.home/config.toml
+cd ~/.home
+cp config.example.toml config.toml
 # Edit config.toml to set the labels for this machine
-~/.home/bootstrap.sh
+./bootstrap.sh
 ```
 
 ## Commands
