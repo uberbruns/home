@@ -311,6 +311,26 @@ push_changes() {
 }
 
 #==================================================
+# Git Pull Command
+#==================================================
+
+pull_changes() {
+    cd "$SCRIPT_DIR" || exit 1
+
+    # Abort if there are uncommitted changes
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo "Error: Uncommitted changes detected. Commit or stash them before pulling." >&2
+        exit 1
+    fi
+
+    echo_h1 "Pulling changes"
+
+    git fetch
+    git pull
+    echo -e "${COLOR_GREEN}Repository is up to date${COLOR_RESET}"
+}
+
+#==================================================
 # Command Line Interface
 #==================================================
 
@@ -331,6 +351,10 @@ while [[ $# -gt 0 ]]; do
             COMMAND="push"
             shift
             ;;
+        pull)
+            COMMAND="pull"
+            shift
+            ;;
         *)
             echo "Error: Unknown argument '${1:-}'" >&2
             echo ""
@@ -339,6 +363,7 @@ while [[ $# -gt 0 ]]; do
             echo "Commands:"
             echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
             echo "  push       Commit and push all changes with AI-generated commit message"
+            echo "  pull       Fetch and pull latest changes (requires clean working tree)"
             echo ""
             echo "Flags:"
             echo "  --dryrun   Print actions without executing them"
@@ -356,6 +381,7 @@ if [[ -z "$COMMAND" ]]; then
     echo "Commands:"
     echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
     echo "  push       Commit and push all changes with AI-generated commit message"
+    echo "  pull       Fetch and pull latest changes (requires clean working tree)"
     echo ""
     echo "Flags:"
     echo "  --dryrun   Print actions without executing them"
@@ -370,6 +396,10 @@ case "$COMMAND" in
         ;;
     push)
         push_changes
+        exit 0
+        ;;
+    pull)
+        pull_changes
         exit 0
         ;;
 esac
