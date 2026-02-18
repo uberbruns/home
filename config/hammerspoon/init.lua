@@ -21,7 +21,8 @@ local bindMoveToNextScreen = hotkeys.bindMoveToNextScreen
 require("autoreload")
 require("bookmarks")
 require("hyperkey")
-require("launchOrFocusOrLayoutByBundle")
+
+local launcher = require("launchOrFocusOrLayoutByBundle")
 
 -- Apps
 bindAppByBundle("t", "com.mitchellh.ghostty")
@@ -39,8 +40,11 @@ bindAppByBundle("o", "org.openscad.OpenSCAD")
 -- Window Focus
 bindCycleWindows("delete")
 
+-- Layout
+launcher.bindSplitLayoutAction("space")
+
 -- Window Location
-bindWindowLocation("1", 0,   1/4)
+bindWindowLocation("1", 0,   1/4) 
 bindWindowLocation("2", 1/4, 3/4)
 bindWindowLocation("3", 0,   1/3)
 bindWindowLocation("4", 1/3, 2/3)

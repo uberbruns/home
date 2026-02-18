@@ -6,6 +6,46 @@ HOME_TOML="$SCRIPT_DIR/home.toml"
 CONFIG_TOML="$SCRIPT_DIR/config.toml"
 DRYRUN=false
 
+# ANSI color codes
+COLOR_RESET='\033[0m'
+COLOR_BOLD='\033[1m'
+COLOR_CYAN='\033[36m'
+COLOR_GREEN='\033[32m'
+COLOR_YELLOW='\033[33m'
+COLOR_RED='\033[31m'
+
+# Output helpers
+echo_h1() {
+    echo -e "${COLOR_BOLD}${COLOR_CYAN}# $1${COLOR_RESET}"
+    echo ""
+}
+
+echo_h2() {
+    echo -e "${COLOR_BOLD}## $1${COLOR_RESET}"
+}
+
+echo_kv() {
+    local key="$1"
+    local value="$2"
+    echo -e "${COLOR_CYAN}${key}:${COLOR_RESET} ${value}"
+}
+
+echo_status_skip() {
+    echo -e "${COLOR_YELLOW}Status: Skipped${COLOR_RESET} - $1"
+}
+
+echo_status_exists() {
+    echo -e "${COLOR_GREEN}Status: Already exists${COLOR_RESET}"
+}
+
+echo_status_would_skip() {
+    echo -e "${COLOR_YELLOW}Status: Would skip${COLOR_RESET} - $1"
+}
+
+echo_status_would_create() {
+    echo -e "${COLOR_GREEN}Status: Would create symlink${COLOR_RESET}"
+}
+
 dasel_query() {
     local file="$1"
     local selector="$2"
@@ -144,14 +184,14 @@ process_entry() {
     entry_labels=$(dasel_query "$HOME_TOML" "$selector.labels" -o json 2>/dev/null || echo "[]")
 
     if [[ "$DRYRUN" == true ]]; then
-        echo "Entry: $table ($selector)"
-        echo "  Required labels: $entry_labels"
+        echo_h2 "$table"
+        echo_kv "Required labels" "$entry_labels"
     fi
 
     if [[ "$entry_labels" != "[]" ]] && [[ "$config_labels" != "[]" ]]; then
         if ! check_labels_match "$config_labels" "$entry_labels"; then
             if [[ "$DRYRUN" == true ]]; then
-                echo "  Skipped: no matching labels"
+                echo_status_skip "no matching labels"
                 echo ""
             fi
             return 1
@@ -163,14 +203,14 @@ process_entry() {
     target="${target//\~/$HOME}"
 
     if [[ "$DRYRUN" == true ]]; then
-        echo "  Source: $source_path"
-        echo "  Target: $target"
+        echo_kv "Source" "$source_path"
+        echo_kv "Target" "$target"
         if [[ -L "$target" ]]; then
-            echo "  Action: Symlink already exists"
+            echo_status_exists
         elif [[ -e "$target" ]]; then
-            echo "  Action: Would skip (target exists and is not a symlink)"
+            echo_status_would_skip "target exists and is not a symlink"
         else
-            echo "  Action: Would create symlink"
+            echo_status_would_create
         fi
         echo ""
     else
@@ -189,14 +229,21 @@ process_entry() {
 }
 
 install_symlinks() {
+    if [[ ! -f "$CONFIG_TOML" ]]; then
+        echo "Error: config.toml not found at $CONFIG_TOML" >&2
+        exit 1
+    fi
+
     local config_labels
     config_labels=$(get_config_labels)
     local tables
     tables=$(get_tables)
 
     if [[ "$DRYRUN" == true ]]; then
-        echo "Config labels: $config_labels"
+        echo_h1 "Config"
+        echo_kv "Labels" "$config_labels"
         echo ""
+        echo_h1 "Symlinks"
     fi
 
     for table in $tables; do
@@ -233,6 +280,8 @@ install_symlinks() {
     done
 }
 
+COMMAND=""
+
 while [[ $# -gt 0 ]]; do
     case "${1:-}" in
         --dryrun)
@@ -240,11 +289,12 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         install)
+            COMMAND="install"
             shift
-            install_symlinks
-            exit 0
             ;;
         *)
+            echo "Error: Unknown argument '${1:-}'" >&2
+            echo ""
             echo "Usage: home.sh [--dryrun] <command>"
             echo ""
             echo "Commands:"
@@ -257,5 +307,22 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "Usage: home.sh [--dryrun] <command>"
-exit 1
+if [[ -z "$COMMAND" ]]; then
+    echo "Error: No command specified" >&2
+    echo ""
+    echo "Usage: home.sh [--dryrun] <command>"
+    echo ""
+    echo "Commands:"
+    echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
+    echo ""
+    echo "Flags:"
+    echo "  --dryrun   Print actions without executing them"
+    exit 1
+fi
+
+case "$COMMAND" in
+    install)
+        install_symlinks
+        exit 0
+        ;;
+esac
