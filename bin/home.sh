@@ -253,7 +253,9 @@ generate_commit_message() {
     # Try to use Claude if available
     if command -v claude &>/dev/null; then
         local commit_message
-        commit_message=$(cat <<EOF | claude --no-cache 2>/dev/null | head -n 1
+        local claude_stderr
+        claude_stderr=$(mktemp)
+        commit_message=$(cat <<EOF | claude --no-cache 2>"$claude_stderr" | head -n 1
 Based on the following git diff, generate a concise commit message
 (50 characters or less) that describes the changes. Return only the
 commit message, nothing else.
@@ -264,9 +266,16 @@ EOF
 
         # Return Claude's message if successful
         if [[ -n "$commit_message" ]]; then
+            rm -f "$claude_stderr"
             echo "$commit_message"
             return 0
         fi
+
+        # Print error if Claude failed
+        if [[ -s "$claude_stderr" ]]; then
+            echo "Claude error: $(cat "$claude_stderr")" >&2
+        fi
+        rm -f "$claude_stderr"
     fi
 
     # Fallback to generic message
