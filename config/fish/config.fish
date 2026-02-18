@@ -1,5 +1,5 @@
 if status is-interactive
-  
+
   set -U fish_greeting ''
   set -U fish_cursor_external block
   set -U fish_cursor_default block
@@ -9,7 +9,7 @@ if status is-interactive
 
 
   fzf_configure_bindings --directory=super-f --git_log=super-l --git_status=super-s --history=super-r --processes=super-p --variables=super-v
-  
+
   if functions --query _natural_selection
     bind escape            '_natural_selection end-selection'
     bind ctrl-r            '_natural_selection history-pager'
@@ -43,14 +43,18 @@ if status is-interactive
   end
 end
 
-starship init fish | source
-
 export EDITOR="code"
 export VISUAL="code"
 
-alias brew="sudo -i -u karsten brew"
+if test (whoami) = prefect
+  alias brew="sudo -i -u karsten brew"
+end
 alias ai="claude -p"
+alias home="~/.home/bin/home.sh"
 
 fish_add_path /.npm-global/bin
 fish_add_path /Users/prefect/.local/bin
 fish_add_path /opt/homebrew/bin
+
+starship init fish | source
+mise activate fish | source

@@ -48,10 +48,13 @@ local CASCADE_OFFSET_Y = 0
 
 local ActionType = {
   focusOrLayout = "focusOrLayout",
-  split = "split"
+  split = "split",
+  letterRegistered = "letterRegistered"
 }
 
 local actionQueue = {}
+local registeredApps = {}
+local registeredLetters = {}
 
 --------------------------------------------------
 -- Public API
@@ -59,7 +62,7 @@ local actionQueue = {}
 
 function M.queueAppForLayout(bundleID)
   -- Create and queue action
-  local action = createQueuedAction(ActionType.focusOrLayout, bundleID)
+  local action = createFocusOrLayoutAction(bundleID)
   table.insert(actionQueue, action)
 
   -- Process immediately or wait for hyper release
@@ -73,11 +76,38 @@ end
 -- Legacy function name for compatibility
 M.launchOrFocusOrLayoutByBundle = M.queueAppForLayout
 
+function M.registerApp(shortcut, bundleID)
+  -- Store app registration
+  registeredApps[shortcut] = bundleID
+
+  -- Register hotkeys for each letter in the shortcut
+  for i = 1, #shortcut do
+    local letter = shortcut:sub(i, i)
+
+    if not registeredLetters[letter] then
+      -- Register this letter as hotkey
+      registeredLetters[letter] = true
+
+      local hyper = {"cmd", "alt", "ctrl", "shift"}
+      hs.hotkey.bind(hyper, letter, function()
+        local action = createLetterAction(letter)
+        table.insert(actionQueue, action)
+
+        if not isHyperHeld() then
+          processQueue()
+        else
+          hyperkey.startPolling()
+        end
+      end)
+    end
+  end
+end
+
 function M.setSplitKey(key)
   -- Bind key to insert split action
   local hyper = {"cmd", "alt", "ctrl", "shift"}
   hs.hotkey.bind(hyper, key, function()
-    local action = createQueuedAction(ActionType.split, nil)
+    local action = createSplitAction()
     table.insert(actionQueue, action)
 
     if not isHyperHeld() then
@@ -96,12 +126,15 @@ function processQueue()
   -- Validate queue
   if #actionQueue == 0 then return end
 
+  -- Convert letter actions to app actions
+  local processedActions = convertLetterActionsToAppActions(actionQueue)
+
   -- Capture initial state
-  local totalCount = #actionQueue
+  local totalCount = #processedActions
   local initialFocusedWindow = hs.window.focusedWindow()
 
-  -- Create tiles from queued actions
-  local tiles = createTilesFromQueue()
+  -- Create tiles from processed actions
+  local tiles = createTilesFromActions(processedActions)
 
   -- Trigger layout for multiple items
   if totalCount > 1 then
@@ -114,6 +147,61 @@ function processQueue()
   actionQueue = {}
 end
 
+function convertLetterActionsToAppActions(actions)
+  local convertedActions = {}
+  local letterIndex = 1
+
+  while letterIndex <= #actions do
+    local action = actions[letterIndex]
+
+    if action.type == ActionType.letterRegistered then
+      -- Collect consecutive letter actions
+      local letterSequence = ""
+      local sequenceLength = 0
+
+      for i = letterIndex, #actions do
+        if actions[i].type == ActionType.letterRegistered then
+          letterSequence = letterSequence .. actions[i].id
+          sequenceLength = sequenceLength + 1
+        else
+          break
+        end
+      end
+
+      -- Try to match letters to registered apps
+      local matched = false
+      local consumedLetters = 0
+
+      for tryLength = #letterSequence, 1, -1 do
+        local testShortcut = letterSequence:sub(1, tryLength)
+        local bundleID = registeredApps[testShortcut]
+
+        if bundleID then
+          -- Found match, create app action
+          table.insert(convertedActions, createFocusOrLayoutAction(bundleID))
+          consumedLetters = tryLength
+          matched = true
+          break
+        end
+      end
+
+      if matched then
+        -- Advance past consumed letters
+        letterIndex = letterIndex + consumedLetters
+      else
+        -- No match found, discard first letter and retry
+        letterIndex = letterIndex + 1
+      end
+    else
+      -- Non-letter action, pass through
+      table.insert(convertedActions, action)
+      letterIndex = letterIndex + 1
+    end
+  end
+
+  return convertedActions
+end
+
 function consolidateActions(actions)
   -- Handle empty input
   if #actions == 0 then return {} end
@@ -122,8 +210,8 @@ function consolidateActions(actions)
   local consolidatedActions = {}
   local currentAction = {
     type = actions[1].type,
-    bundleID = actions[1].bundleID,
-    weight = actions[1].weight
+    id = actions[1].id,
+    value = actions[1].value
   }
 
   -- Process remaining actions
@@ -135,22 +223,22 @@ function consolidateActions(actions)
       table.insert(consolidatedActions, currentAction)
       currentAction = {
         type = action.type,
-        bundleID = action.bundleID,
-        weight = action.weight
+        id = action.id,
+        value = action.value
       }
     else
       -- Consolidate consecutive matching actions
-      local actionKey = action.type .. ":" .. action.bundleID
-      local currentKey = currentAction.type .. ":" .. currentAction.bundleID
+      local actionKey = action.type .. ":" .. action.id
+      local currentKey = currentAction.type .. ":" .. currentAction.id
 
       if actionKey == currentKey then
-        currentAction.weight = currentAction.weight + action.weight
+        currentAction.value = currentAction.value + action.value
       else
         table.insert(consolidatedActions, currentAction)
         currentAction = {
           type = action.type,
-          bundleID = action.bundleID,
-          weight = action.weight
+          id = action.id,
+          value = action.value
         }
       end
     end
@@ -161,17 +249,17 @@ function consolidateActions(actions)
   return consolidatedActions
 end
 
-function createTilesFromQueue()
-  -- Consolidate queued actions
-  local consolidatedActions = consolidateActions(actionQueue)
+function createTilesFromActions(actions)
+  -- Consolidate actions
+  local consolidatedActions = consolidateActions(actions)
 
   -- Activate apps and create tiles
   local tiles = {}
   for _, action in ipairs(consolidatedActions) do
     if action.type ~= ActionType.split then
-      local app = ensureAppRunning(action.bundleID)
+      local app = ensureAppRunning(action.id)
       if app then
-        table.insert(tiles, { app = app, weight = action.weight })
+        table.insert(tiles, { app = app, weight = action.value })
       end
     end
   end
@@ -320,11 +408,27 @@ end
 -- Supporting Functions
 --------------------------------------------------
 
-function createQueuedAction(actionType, bundleID)
+function createFocusOrLayoutAction(bundleID)
   return {
-    type = actionType,
-    bundleID = bundleID,
-    weight = 1
+    type = ActionType.focusOrLayout,
+    id = bundleID,
+    value = 1
+  }
+end
+
+function createSplitAction()
+  return {
+    type = ActionType.split,
+    id = nil,
+    value = 1
+  }
+end
+
+function createLetterAction(letter)
+  return {
+    type = ActionType.letterRegistered,
+    id = letter,
+    value = 1
   }
 end
 

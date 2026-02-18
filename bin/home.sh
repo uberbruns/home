@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+#==================================================
+# Configuration
+#==================================================
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOME_TOML="$SCRIPT_DIR/home.toml"
 CONFIG_TOML="$SCRIPT_DIR/config.toml"
@@ -12,17 +16,15 @@ COLOR_BOLD='\033[1m'
 COLOR_CYAN='\033[36m'
 COLOR_GREEN='\033[32m'
 COLOR_YELLOW='\033[33m'
-COLOR_RED='\033[31m'
 COLOR_BLUE='\033[34m'
 
-# Output helpers
+#==================================================
+# Output Helpers
+#==================================================
+
 echo_h1() {
     echo -e "${COLOR_BOLD}${COLOR_CYAN}# $1${COLOR_RESET}"
     echo ""
-}
-
-echo_h2() {
-    echo -e "${COLOR_BOLD}## $1${COLOR_RESET}"
 }
 
 echo_kv() {
@@ -31,21 +33,9 @@ echo_kv() {
     echo -e "${COLOR_CYAN}${key}:${COLOR_RESET} ${value}"
 }
 
-echo_status_skip() {
-    echo -e "${COLOR_YELLOW}Status: Skipped${COLOR_RESET} - $1"
-}
-
-echo_status_exists() {
-    echo -e "${COLOR_BLUE}Status: Already exists${COLOR_RESET}"
-}
-
-echo_status_would_skip() {
-    echo -e "${COLOR_YELLOW}Status: Would skip${COLOR_RESET} - $1"
-}
-
-echo_status_would_create() {
-    echo -e "${COLOR_GREEN}Status: Would create symlink${COLOR_RESET}"
-}
+#==================================================
+# TOML Parsing Helpers
+#==================================================
 
 dasel_query() {
     local file="$1"
@@ -55,30 +45,34 @@ dasel_query() {
 }
 
 get_tables() {
+    # Extract all table names from home.toml
     grep -E '^\[+.+\]+$' "$HOME_TOML" | tr -d '[]' | sort -u
 }
 
 is_array_table() {
     local table="$1"
+    # Check if table is defined as array of tables [[table]]
     grep -qE "^\[\[$table\]\]" "$HOME_TOML"
 }
 
 get_config_labels() {
+    # Extract labels from config.toml
     dasel_query "$CONFIG_TOML" "labels" -o json 2>/dev/null || echo "[]"
 }
 
-# Check if provided_labels satisfies a single requirement (string or OR-array)
-# Args: provided_labels (json string), requirement (string, may be nested array marker)
-# Returns: 0 if satisfied, 1 if not
+#==================================================
+# Label Matching Logic
+#==================================================
+
 check_requirement() {
     local provided_labels="$1"
     local requirement="$2"
 
-    # Clean up the requirement
+    # Normalize requirement string
     requirement=$(echo "$requirement" | tr -d ' \n')
 
     if [[ "$requirement" == "["* ]]; then
-        # OR requirement: at least one must be in provided
+        # OR requirement: at least one label must match
         local labels
         labels=$(echo "$requirement" | tr -d '[]' | tr ',' '\n' | tr -d '"')
         for label in $labels; do
@@ -89,7 +83,7 @@ check_requirement() {
         done
         return 1
     else
-        # Single label requirement: must be in provided
+        # Single label requirement: must be present
         local label
         label=$(echo "$requirement" | tr -d '"')
         if echo "$provided_labels" | grep -q "\"$label\""; then
@@ -99,16 +93,11 @@ check_requirement() {
     fi
 }
 
-# Check if config labels satisfy all entry requirements
-# Entry labels format: ["label1", ["or1", "or2"], "label2"]
-# Top level = AND, nested arrays = OR
-# Args: provided_labels (json array from config), required_labels (json array from entry)
-# Returns: 0 if all requirements satisfied, 1 if any fails
 check_labels_match() {
     local provided_labels="$1"
     local required_labels="$2"
 
-    # Compact JSON to single line for easier parsing
+    # Compact JSON for parsing
     local compact
     compact=$(echo "$required_labels" | tr -d ' \n')
 
@@ -116,10 +105,10 @@ check_labels_match() {
     compact="${compact#\[}"
     compact="${compact%\]}"
 
-    # If empty, match everything
+    # Empty requirements match everything
     [[ -z "$compact" ]] && return 0
 
-    # Parse top-level elements (handling nested arrays)
+    # Parse top-level elements (AND logic, nested arrays are OR)
     local depth=0
     local current=""
     local i=0
@@ -134,7 +123,7 @@ check_labels_match() {
             ((depth--))
             current+="$char"
         elif [[ "$char" == "," ]] && [[ $depth -eq 0 ]]; then
-            # End of top-level element
+            # Process completed top-level element
             if [[ -n "$current" ]]; then
                 if ! check_requirement "$provided_labels" "$current"; then
                     return 1
@@ -148,7 +137,7 @@ check_labels_match() {
         ((i++))
     done
 
-    # Check last element
+    # Process final element
     if [[ -n "$current" ]]; then
         if ! check_requirement "$provided_labels" "$current"; then
             return 1
@@ -158,18 +147,19 @@ check_labels_match() {
     return 0
 }
 
-# Process a single entry (table or array element)
-# Args: table name, selector prefix, config_labels
-# Returns: 0 if processed (matched or created), 1 if skipped
+#==================================================
+# Symlink Installation
+#==================================================
+
 process_entry() {
     local table="$1"
     local selector="$2"
     local config_labels="$3"
 
-    # Determine source path: use 'source' key if present, otherwise default to config/$table
+    # Resolve source path
     local source_path
-    local custom_source
-    custom_source=$(dasel_query "$HOME_TOML" "$selector.source" 2>/dev/null | tr -d "'" || true)
+    local custom_source=""
+    custom_source=$(dasel_query "$HOME_TOML" "$selector.source" 2>/dev/null | tr -d "'" || echo "")
 
     if [[ -n "$custom_source" ]]; then
         source_path="$SCRIPT_DIR/$custom_source"
@@ -177,52 +167,39 @@ process_entry() {
         source_path="$SCRIPT_DIR/config/$table"
     fi
 
+    # Skip if source doesn't exist
     if [[ ! -e "$source_path" ]]; then
         return 1
     fi
 
+    # Get entry's required labels
     local entry_labels
     entry_labels=$(dasel_query "$HOME_TOML" "$selector.labels" -o json 2>/dev/null || echo "[]")
 
-    if [[ "$DRYRUN" == true ]]; then
-        echo_h2 "$table"
-        echo_kv "Required labels" "$entry_labels"
-    fi
-
+    # Check label matching
     if [[ "$entry_labels" != "[]" ]] && [[ "$config_labels" != "[]" ]]; then
         if ! check_labels_match "$config_labels" "$entry_labels"; then
-            if [[ "$DRYRUN" == true ]]; then
-                echo_status_skip "no matching labels"
-                echo ""
-            fi
             return 1
         fi
     fi
 
+    # Resolve target path
     local target
     target=$(dasel_query "$HOME_TOML" "$selector.target" | tr -d "'")
     target="${target//\~/$HOME}"
 
-    if [[ "$DRYRUN" == true ]]; then
-        echo_kv "Source" "$source_path"
-        echo_kv "Target" "$target"
-        if [[ -L "$target" ]]; then
-            echo_status_exists
-        elif [[ -e "$target" ]]; then
-            echo_status_would_skip "target exists and is not a symlink"
-        else
-            echo_status_would_create
-        fi
-        echo ""
+    # Output status
+    if [[ -L "$target" ]]; then
+        echo -e "[${COLOR_CYAN}$table${COLOR_RESET}] ${COLOR_BLUE}Already exists${COLOR_RESET} -> $target"
+    elif [[ -e "$target" ]]; then
+        echo -e "[${COLOR_CYAN}$table${COLOR_RESET}] ${COLOR_YELLOW}Skipped${COLOR_RESET} (not a symlink) -> $target"
     else
-        if [[ -L "$target" ]]; then
-            echo -e "${COLOR_BLUE}Symlink already exists: $target${COLOR_RESET}"
-        elif [[ -e "$target" ]]; then
-            echo "Warning: $target exists and is not a symlink, skipping"
+        if [[ "$DRYRUN" == true ]]; then
+            echo -e "[${COLOR_CYAN}$table${COLOR_RESET}] ${COLOR_GREEN}Would create${COLOR_RESET} -> $target"
         else
             mkdir -p "$(dirname "$target")"
             ln -s "$source_path" "$target"
-            echo "Created symlink: $target -> $source_path"
+            echo -e "[${COLOR_CYAN}$table${COLOR_RESET}] ${COLOR_GREEN}Created${COLOR_RESET} -> $target"
         fi
     fi
 
@@ -230,59 +207,116 @@ process_entry() {
 }
 
 install_symlinks() {
+    # Validate config file exists
     if [[ ! -f "$CONFIG_TOML" ]]; then
         echo "Error: config.toml not found at $CONFIG_TOML" >&2
         exit 1
     fi
 
+    # Load configuration
     local config_labels
     config_labels=$(get_config_labels)
     local tables
     tables=$(get_tables)
 
-    if [[ "$DRYRUN" == true ]]; then
-        echo_h1 "Config"
-        echo_kv "Labels" "$config_labels"
-        echo ""
-        echo_h1 "Symlinks"
-    fi
-
+    # Process each table
     for table in $tables; do
         if is_array_table "$table"; then
-            # Array of tables: iterate until first match
+            # Process array of tables
             local idx=0
-            local matched=false
             while true; do
                 local selector="$table[$idx]"
-                # Check if index exists
+
+                # Check if array element exists
                 if ! dasel_query "$HOME_TOML" "$selector.target" &>/dev/null; then
                     break
                 fi
 
-                if process_entry "$table" "$selector" "$config_labels"; then
-                    matched=true
-                    break
-                fi
+                process_entry "$table" "$selector" "$config_labels" || true
 
                 ((idx++))
             done
-
-            if [[ "$matched" == false ]] && [[ "$DRYRUN" != true ]]; then
-                echo "Skipping $table: no matching labels in any variant"
-            fi
         else
-            # Regular table
-            if ! process_entry "$table" "$table" "$config_labels"; then
-                if [[ "$DRYRUN" != true ]]; then
-                    echo "Skipping $table: no matching labels"
-                fi
-            fi
+            # Process single table
+            process_entry "$table" "$table" "$config_labels" || true
         fi
     done
 }
 
+#==================================================
+# Git Push Command
+#==================================================
+
+generate_commit_message() {
+    local diff_output="$1"
+
+    # Try to use Claude if available
+    if command -v claude &>/dev/null; then
+        local commit_message
+        commit_message=$(cat <<EOF | claude --no-cache 2>/dev/null | head -n 1
+Based on the following git diff, generate a concise commit message
+(50 characters or less) that describes the changes. Return only the
+commit message, nothing else.
+
+$diff_output
+EOF
+)
+
+        # Return Claude's message if successful
+        if [[ -n "$commit_message" ]]; then
+            echo "$commit_message"
+            return 0
+        fi
+    fi
+
+    # Fallback to generic message
+    echo "Update configuration"
+}
+
+push_changes() {
+    # Navigate to repository root
+    cd "$SCRIPT_DIR" || exit 1
+
+    # Check for uncommitted changes
+    if [[ -z "$(git status --porcelain)" ]]; then
+        echo "No changes to commit"
+        exit 0
+    fi
+
+    echo_h1 "Pushing changes"
+
+    # Stage all changes
+    git add -A
+    echo -e "${COLOR_GREEN}Staged all changes${COLOR_RESET}"
+
+    # Generate commit message
+    local diff_output
+    diff_output=$(git diff --cached)
+
+    local commit_message
+    if command -v claude &>/dev/null; then
+        echo "Generating commit message with Claude..."
+    fi
+    commit_message=$(generate_commit_message "$diff_output")
+
+    echo_kv "Commit message" "$commit_message"
+
+    # Create commit
+    git commit -m "$commit_message"
+    echo -e "${COLOR_GREEN}Changes committed${COLOR_RESET}"
+
+    # Push to remote
+    git push
+    echo -e "${COLOR_GREEN}Changes pushed to remote${COLOR_RESET}"
+}
+
+#==================================================
+# Command Line Interface
+#==================================================
+
 COMMAND=""
 
+# Parse arguments
 while [[ $# -gt 0 ]]; do
     case "${1:-}" in
         --dryrun)
@@ -293,6 +327,10 @@ while [[ $# -gt 0 ]]; do
             COMMAND="install"
             shift
             ;;
+        push)
+            COMMAND="push"
+            shift
+            ;;
         *)
             echo "Error: Unknown argument '${1:-}'" >&2
             echo ""
@@ -300,6 +338,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Commands:"
             echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
+            echo "  push       Commit and push all changes with AI-generated commit message"
             echo ""
             echo "Flags:"
             echo "  --dryrun   Print actions without executing them"
@@ -308,6 +347,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Validate command was provided
 if [[ -z "$COMMAND" ]]; then
     echo "Error: No command specified" >&2
     echo ""
@@ -315,15 +355,21 @@ if [[ -z "$COMMAND" ]]; then
     echo ""
     echo "Commands:"
     echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
+    echo "  push       Commit and push all changes with AI-generated commit message"
     echo ""
     echo "Flags:"
     echo "  --dryrun   Print actions without executing them"
     exit 1
 fi
 
+# Execute command
 case "$COMMAND" in
     install)
         install_symlinks
+        exit 0
+        ;;
+    push)
+        push_changes
         exit 0
         ;;
 esac

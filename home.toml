@@ -4,20 +4,45 @@ labels = ["macos"]
 
 [fish]
 target = "~/.config/fish"
-labels = [["macos", "linux"], "dev"]
+labels = [["macos", "linux"], "cli"]
 
 [[ghostty]]
 target = "~/Library/Application Support/com.mitchellh.ghostty"
-labels = ["macos", "dev"]
+labels = ["macos", "cli"]
 
 [[ghostty]]
 target = "~/.config/ghostty"
-labels = ["linux", "dev"]
+labels = ["linux", "cli"]
+
+[[mise]]
+source = "config/mise/config.toml"
+target = "~/.config/mise.toml"
+labels = ["cli"]
+
+[[mise]]
+source = "config/mise/ai.toml"
+target = "~/.config/mise/conf.d/ai.toml"
+labels = ["ai"]
+
+[[mise]]
+source = "config/mise/dev.toml"
+target = "~/.config/mise/conf.d/dev.toml"
+labels = ["dev"]
+
+[[mise]]
+source = "config/mise/media.toml"
+target = "~/.config/mise/conf.d/media.toml"
+labels = ["media"]
+
+[[mise]]
+source = "config/mise/work.toml"
+target = "~/.config/mise/conf.d/work.toml"
+labels = ["work"]
 
 [[starship]]
 source = "config/starship/starship.toml"
 target = "~/.config/starship.toml"
-labels = [["macos", "linux"], "dev"]
+labels = ["cli"]
 
 [[xccolortheme]]
 source = "externals/daltonmenezes/aura-theme/packages/xcode/Aura Soft Dark.xccolortheme"

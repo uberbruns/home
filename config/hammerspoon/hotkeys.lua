@@ -1,9 +1,13 @@
 local hyper = {"cmd", "alt", "ctrl", "shift"}
-local layoutByBundle = require("windowManager")
+local tiling = require("tiling")
+
+local function registerApp(shortcut, bundleID)
+  tiling.registerApp(shortcut, bundleID)
+end
 
 local function bindAppByBundle(key, bundleID)
   hs.hotkey.bind(hyper, key, function()
-    layoutByBundle.launchOrFocusOrLayoutByBundle(bundleID)
+    tiling.launchOrFocusOrLayoutByBundle(bundleID)
   end)
 end
 
@@ -72,6 +76,7 @@ local function bindXcode(key)
 end
 
 return {
+  registerApp = registerApp,
   bindApp = bindApp,
   bindAppByBundle = bindAppByBundle,
   bindCycleWindows = bindCycleWindows,

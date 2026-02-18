@@ -24,3 +24,5 @@ if [[ "$OS" == "Darwin" ]]; then
 elif [[ "$OS" == "Linux" ]]; then
     bootstrap_linux
 fi
+
+mise settings experimental=true

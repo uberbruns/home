@@ -1,5 +1,11 @@
 Reorganize code within files to follow a logical structure that improves readability and maintainability.
 
+### Remove obsolete code
+
+First step: Remove obsolete code
+Second step: Inline trivial code that only has one or two callers without doing anything smart
+
+
 ### Overall File Structure
 
 Files are organized in this order:

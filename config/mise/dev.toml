@@ -1,0 +1,6 @@
+[tools]
+gh = "latest"
+node = "lts"
+python = "latest"
+uv = "latest"
+"npm:@fresh-editor/fresh-editor" = "latest"
