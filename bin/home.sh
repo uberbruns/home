@@ -351,9 +351,9 @@ update_system() {
     echo -e "${COLOR_GREEN}mise install complete${COLOR_RESET}"
 
     echo_h1 "Updating Homebrew"
-    "$SHELL" -l -c "brew update" || true
-    "$SHELL" -l -c "brew upgrade" || true
-    "$SHELL" -l -c "brew cleanup" || true
+    $SHELL -i -c "brew update" || true
+    $SHELL -i -c "brew upgrade" || true
+    $SHELL -i -c "brew cleanup" || true
     echo -e "${COLOR_GREEN}Homebrew update complete${COLOR_RESET}"
 
     echo_h1 "Reloading fish shell"
