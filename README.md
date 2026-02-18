@@ -8,7 +8,7 @@ My personal dotfiles. Configs are stored here and symlinked onto the system. A l
 git clone <repo> ~/.home
 cp ~/.home/config.example.toml ~/.home/config.toml
 # Edit config.toml to set the labels for this machine
-~/.home/bin/home.sh install
+~/.home/bootstrap.sh
 ```
 
 ## Commands
@@ -82,13 +82,12 @@ Terminal emulator config, symlinked to the platform-appropriate location (`~/Lib
 
 Tool version manager configs at `~/.config/mise/`. Tools are split into label-gated groups:
 
-| Label | Tools |
-|-------|-------|
-| `cli` | Base mise config |
-| `ai` | Claude Code |
-| `dev` | Node (LTS), Python, uv, gh, fresh-editor |
+|  Label  | Tools |
+|---------|-------|
+| `ai`    | Claude Code |
+| `dev`   | Node (LTS), Python, uv, gh, fresh-editor |
 | `media` | ffmpeg, yt-dlp |
-| `work` | aws-sso |
+| `work`  | aws-sso |
 
 ### Xcode Color Theme (dev-apple)
 
