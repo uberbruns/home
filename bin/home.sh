@@ -354,10 +354,21 @@ update_system() {
     echo -e "${COLOR_GREEN}mise install complete${COLOR_RESET}"
 
     echo_h1 "Updating Homebrew"
-    $SHELL -i -c "brew update" || true
-    $SHELL -i -c "brew upgrade" || true
-    $SHELL -i -c "brew cleanup" || true
-    echo -e "${COLOR_GREEN}Homebrew update complete${COLOR_RESET}"
+    local homebrew_dir=""
+    if [[ -d /opt/homebrew ]]; then
+        homebrew_dir="/opt/homebrew"
+    elif [[ -d /usr/local/Homebrew ]]; then
+        homebrew_dir="/usr/local/Homebrew"
+    fi
+
+    if [[ -n "$homebrew_dir" ]] && [[ "$(stat -f '%Su' "$homebrew_dir")" == "$(whoami)" ]]; then
+        brew update
+        brew upgrade
+        brew cleanup
+        echo -e "${COLOR_GREEN}Homebrew update complete${COLOR_RESET}"
+    else
+        echo -e "${COLOR_YELLOW}Skipping Homebrew update${COLOR_RESET} (directory not owned by $(whoami))"
+    fi
 
     echo_h1 "Reloading fish shell"
     exec fish -l
