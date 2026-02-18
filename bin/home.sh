@@ -340,6 +340,27 @@ pull_changes() {
 }
 
 #==================================================
+# Update Command
+#==================================================
+
+update_system() {
+    pull_changes
+
+    echo_h1 "Installing tools"
+    mise install
+    echo -e "${COLOR_GREEN}mise install complete${COLOR_RESET}"
+
+    echo_h1 "Updating Homebrew"
+    brew update
+    brew upgrade
+    brew cleanup
+    echo -e "${COLOR_GREEN}Homebrew update complete${COLOR_RESET}"
+
+    echo_h1 "Reloading fish shell"
+    exec fish -l
+}
+
+#==================================================
 # Command Line Interface
 #==================================================
 
@@ -364,6 +385,10 @@ while [[ $# -gt 0 ]]; do
             COMMAND="pull"
             shift
             ;;
+        update)
+            COMMAND="update"
+            shift
+            ;;
         *)
             echo "Error: Unknown argument '${1:-}'" >&2
             echo ""
@@ -373,6 +398,7 @@ while [[ $# -gt 0 ]]; do
             echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
             echo "  push       Commit and push all changes with AI-generated commit message"
             echo "  pull       Fetch and pull latest changes (requires clean working tree)"
+            echo "  update     Pull, run mise install, and reload fish shell"
             echo ""
             echo "Flags:"
             echo "  --dryrun   Print actions without executing them"
@@ -391,6 +417,7 @@ if [[ -z "$COMMAND" ]]; then
     echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
     echo "  push       Commit and push all changes with AI-generated commit message"
     echo "  pull       Fetch and pull latest changes (requires clean working tree)"
+            echo "  update     Pull, run mise install, and reload fish shell"
     echo ""
     echo "Flags:"
     echo "  --dryrun   Print actions without executing them"
@@ -410,5 +437,8 @@ case "$COMMAND" in
     pull)
         pull_changes
         exit 0
+        ;;
+    update)
+        update_system
         ;;
 esac
