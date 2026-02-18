@@ -124,9 +124,19 @@ process_entry() {
     local table="$1"
     local selector="$2"
     local config_labels="$3"
-    local config_dir="$SCRIPT_DIR/config/$table"
 
-    if [[ ! -d "$config_dir" ]]; then
+    # Determine source path: use 'source' key if present, otherwise default to config/$table
+    local source_path
+    local custom_source
+    custom_source=$(dasel_query "$HOME_TOML" "$selector.source" 2>/dev/null | tr -d "'" || true)
+
+    if [[ -n "$custom_source" ]]; then
+        source_path="$SCRIPT_DIR/$custom_source"
+    else
+        source_path="$SCRIPT_DIR/config/$table"
+    fi
+
+    if [[ ! -e "$source_path" ]]; then
         return 1
     fi
 
@@ -153,13 +163,14 @@ process_entry() {
     target="${target//\~/$HOME}"
 
     if [[ "$DRYRUN" == true ]]; then
+        echo "  Source: $source_path"
         echo "  Target: $target"
         if [[ -L "$target" ]]; then
             echo "  Action: Symlink already exists"
         elif [[ -e "$target" ]]; then
             echo "  Action: Would skip (target exists and is not a symlink)"
         else
-            echo "  Action: Would create symlink -> $config_dir"
+            echo "  Action: Would create symlink"
         fi
         echo ""
     else
@@ -169,8 +180,8 @@ process_entry() {
             echo "Warning: $target exists and is not a symlink, skipping"
         else
             mkdir -p "$(dirname "$target")"
-            ln -s "$config_dir" "$target"
-            echo "Created symlink: $target -> $config_dir"
+            ln -s "$source_path" "$target"
+            echo "Created symlink: $target -> $source_path"
         fi
     fi
 

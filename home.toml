@@ -14,6 +14,11 @@ labels = ["macos", "dev"]
 target = "~/.config/ghostty"
 labels = ["linux", "dev"]
 
+[[starship]]
+source = "config/starship/starship.toml"
+target = "~/.config/starship.toml"
+labels = [["macos", "linux"], "dev"]
+
 [test]
 target = "~/.test"
 labels = ["test"]

@@ -1,0 +1,24 @@
+# Inserts a blank line between shell prompts
+add_newline = true
+format = """
+$directory\
+$git_branch\
+$git_status\
+$fill\
+$docker_context\
+$time
+$character"""
+
+[fill]
+symbol = " "
+
+[character]
+success_symbol = "[❯](bold fg:2)"
+error_symbol = "[❯](bold fg:1)"
+
+[directory]
+truncate_to_repo = false
+
+[time]
+disabled = false
+format = "[$time](fg:8)"
