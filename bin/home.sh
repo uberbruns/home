@@ -336,6 +336,7 @@ pull_changes() {
 
     git fetch
     git pull
+    git submodule update --init --recursive
     echo -e "${COLOR_GREEN}Repository is up to date${COLOR_RESET}"
 }
 
