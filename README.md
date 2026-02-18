@@ -5,7 +5,7 @@ My personal dotfiles. Configs are stored here and symlinked onto the system. A l
 ## Setup
 
 ```sh
-git clone <repo> ~/.home
+git clone https://github.com/uberbruns/home ~/.home
 cd ~/.home
 cp config.example.toml config.toml
 # Edit config.toml to set the labels for this machine
