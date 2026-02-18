@@ -328,7 +328,7 @@ pull_changes() {
 
     # Abort if there are uncommitted changes
     if [[ -n "$(git status --porcelain)" ]]; then
-        echo "Error: Uncommitted changes detected. Commit or stash them before pulling." >&2
+        echo "Error: Uncommitted changes detected. Run 'home push' to commit them first." >&2
         exit 1
     fi
 
@@ -351,9 +351,9 @@ update_system() {
     echo -e "${COLOR_GREEN}mise install complete${COLOR_RESET}"
 
     echo_h1 "Updating Homebrew"
-    brew update
-    brew upgrade
-    brew cleanup
+    brew update || true
+    brew upgrade || true
+    brew cleanup || true
     echo -e "${COLOR_GREEN}Homebrew update complete${COLOR_RESET}"
 
     echo_h1 "Reloading fish shell"
