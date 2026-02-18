@@ -19,6 +19,11 @@ source = "config/starship/starship.toml"
 target = "~/.config/starship.toml"
 labels = [["macos", "linux"], "dev"]
 
+[[xccolortheme]]
+source = "externals/daltonmenezes/aura-theme/packages/xcode/Aura Soft Dark.xccolortheme"
+target = "~/Library/Developer/Xcode/UserData/FontAndColorThemes/Favorite.xccolortheme"
+labels = ["macos", "dev-apple"]
+
 [test]
 target = "~/.test"
 labels = ["test"]

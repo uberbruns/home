@@ -22,7 +22,7 @@ require("autoreload")
 require("bookmarks")
 require("hyperkey")
 
-local launcher = require("launchOrFocusOrLayoutByBundle")
+local launcher = require("windowManager")
 
 -- Apps
 bindAppByBundle("t", "com.mitchellh.ghostty")
@@ -34,6 +34,7 @@ bindAppByBundle("p", "tv.plex.desktop")
 bindAppByBundle("c", "com.tinyspeck.slackmacgap")
 bindAppByBundle("d", "com.hnc.Discord")
 bindAppByBundle("s", "org.whispersystems.signal-desktop")
+bindAppByBundle("v", "com.microsoft.teams2")
 bindAppByBundle("r", "com.prusa3d.slic3r")
 bindAppByBundle("o", "org.openscad.OpenSCAD")
 
@@ -41,7 +42,7 @@ bindAppByBundle("o", "org.openscad.OpenSCAD")
 bindCycleWindows("delete")
 
 -- Layout
-launcher.bindSplitLayoutAction("space")
+launcher.setSplitKey("space")
 
 -- Window Location
 bindWindowLocation("1", 0,   1/4) 

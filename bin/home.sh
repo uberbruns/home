@@ -13,6 +13,7 @@ COLOR_CYAN='\033[36m'
 COLOR_GREEN='\033[32m'
 COLOR_YELLOW='\033[33m'
 COLOR_RED='\033[31m'
+COLOR_BLUE='\033[34m'
 
 # Output helpers
 echo_h1() {
@@ -35,7 +36,7 @@ echo_status_skip() {
 }
 
 echo_status_exists() {
-    echo -e "${COLOR_GREEN}Status: Already exists${COLOR_RESET}"
+    echo -e "${COLOR_BLUE}Status: Already exists${COLOR_RESET}"
 }
 
 echo_status_would_skip() {
@@ -215,7 +216,7 @@ process_entry() {
         echo ""
     else
         if [[ -L "$target" ]]; then
-            echo "Symlink already exists: $target"
+            echo -e "${COLOR_BLUE}Symlink already exists: $target${COLOR_RESET}"
         elif [[ -e "$target" ]]; then
             echo "Warning: $target exists and is not a symlink, skipping"
         else

@@ -1,5 +1,5 @@
 local hyper = {"cmd", "alt", "ctrl", "shift"}
-local layoutByBundle = require("launchOrFocusOrLayoutByBundle")
+local layoutByBundle = require("windowManager")
 
 local function bindAppByBundle(key, bundleID)
   hs.hotkey.bind(hyper, key, function()
