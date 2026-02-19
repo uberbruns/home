@@ -178,17 +178,36 @@ process_entry() {
     local entry_labels
     entry_labels=$(dasel_query "$HOME_TOML" "$selector.labels" -o json 2>/dev/null || echo "[]")
 
-    # Check label matching
-    if [[ "$entry_labels" != "[]" ]] && [[ "$config_labels" != "[]" ]]; then
-        if ! check_labels_match "$config_labels" "$entry_labels"; then
-            return 1
-        fi
-    fi
-
     # Resolve target path
     local target
     target=$(dasel_query "$HOME_TOML" "$selector.target" | tr -d "'")
     target="${target//\~/$HOME}"
+
+    # Check label matching
+    local labels_match=true
+    if [[ "$entry_labels" != "[]" ]] && [[ "$config_labels" != "[]" ]]; then
+        if ! check_labels_match "$config_labels" "$entry_labels"; then
+            labels_match=false
+        fi
+    fi
+
+    # If labels don't match, check if we should remove an existing symlink
+    if [[ "$labels_match" == false ]]; then
+        if [[ -L "$target" ]]; then
+            # Check if symlink points to our source
+            local link_target
+            link_target=$(readlink "$target")
+            if [[ "$link_target" == "$source_path" ]]; then
+                if [[ "$DRYRUN" == true ]]; then
+                    echo -e "[${COLOR_CYAN}$table${COLOR_RESET}] ${COLOR_YELLOW}Would remove${COLOR_RESET} (label mismatch) -> $target"
+                else
+                    rm "$target"
+                    echo -e "[${COLOR_CYAN}$table${COLOR_RESET}] ${COLOR_YELLOW}Removed${COLOR_RESET} (label mismatch) -> $target"
+                fi
+            fi
+        fi
+        return 1
+    fi
 
     # Output status
     if [[ -L "$target" ]]; then

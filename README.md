@@ -7,7 +7,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| **[Terminal Setup](#terminal-setup)** | [Ghostty](https://ghostty.org/) terminal emulator with [Fish](https://fishshell.com/) shell and [Starship](https://starship.rs/) prompt. |
+| **[Terminal Setup](#terminal-setup)** | [Ghostty](https://ghostty.org/) terminal setup with [Fish](https://fishshell.com/) shell and [Starship](https://starship.rs/) prompt. |
 | **[Configuration Management](#configuration-management)** | Declarative symlink management with label-based filtering for multi-machine setups via custom `home` script. |
 | **[Development Tools](#development-tools)** | Version-managed toolchains and utilities via [mise](https://mise.jdx.dev/). |
 | **[App Launcher](#app-launcher)** | Hyper key shortcuts for instant app focus and launch via [Hammerspoon](https://www.hammerspoon.org/). |

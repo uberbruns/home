@@ -29,7 +29,7 @@ if test (whoami) = prefect
   alias brew="sudo -i -u karsten brew"
 end
 alias ai="claude -p"
-alias home="~/.home/bin/home.sh"
+alias home="~/.home/bin/home.py"
 
 #==================================================
 # Interactive
