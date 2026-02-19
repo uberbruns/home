@@ -21,7 +21,7 @@ cursor-style-blink = false
 # /_/ /_/___/_//_/ /___/_//_/\__/_/_/
 
 
-command = /opt/homebrew/bin/fish --login --interactive
+command = fish --login --interactive
 
 keybind = alt+left=unbind
 keybind = alt+right=unbind
