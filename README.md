@@ -34,7 +34,7 @@ cp config.example.toml config.toml
 
 Ghostty terminal emulator configuration with Fish shell, Starship prompt, fzf.fish keybindings for fuzzy search, natural text selection, and mise activation.
 
-**Relevant Files:** [config/fish](config/fish), [config/ghostty](config/ghostty), [config/starship.toml](config/starship.toml)
+**Relevant Files:** [config/fish/config.fish](config/fish/config.fish), [config/ghostty/config](config/ghostty/config), [config/starship.toml](config/starship.toml)
 
 ### Configuration Management
 
@@ -86,7 +86,7 @@ labels = ["macos", "cli", "dev"]
 
 mise manages tool versions. Configuration files are symlinked using the same label system as above, with tools organized by label (e.g., `ai`, `dev`, `media`, `work`) to control which are installed on each machine.
 
-**Relevant Files:** [config/mise](config/mise)
+**Relevant Files:** [config/mise/config.toml](config/mise/config.toml), [config/mise/ai.toml](config/mise/ai.toml), [config/mise/dev.toml](config/mise/dev.toml), [config/mise/media.toml](config/mise/media.toml), [config/mise/work.toml](config/mise/work.toml)
 
 ### App Launcher
 
@@ -94,7 +94,7 @@ Hammerspoon maps `hyper` key shortcuts to apps. Press `hyper`+letter to focus or
 
 **Examples:** `hyper`+`e` for VS Code, `hyper`+`t` for Ghostty, `hyper`+`x` for Xcode.
 
-**Relevant Files:** [config/hammerspoon](config/hammerspoon)
+**Relevant Files:** [config/hammerspoon/hyperkey.lua](config/hammerspoon/hyperkey.lua), [config/hammerspoon/init.lua](config/hammerspoon/init.lua)
 
 ### Window Tiling
 
@@ -105,7 +105,7 @@ Hold `hyper` and press multiple app keys in sequence. On release, queued apps ti
 - `e` `e` `t` — VS Code takes 2/3, Ghostty takes 1/3
 - `e` `space` `e` — Two VS Code windows, equal width
 
-**Relevant Files:** [config/hammerspoon](config/hammerspoon)
+**Relevant Files:** [config/hammerspoon/tiling.lua](config/hammerspoon/tiling.lua), [config/hammerspoon/init.lua](config/hammerspoon/init.lua)
 
 ### Window Positioning
 
@@ -115,4 +115,4 @@ Hold `hyper` and press multiple app keys in sequence. On release, queued apps ti
 - `` ´ `` to move to next screen
 - `delete` to cycle windows of the current app
 
-**Relevant Files:** [config/hammerspoon](config/hammerspoon)
+**Relevant Files:** [config/hammerspoon/hotkeys.lua](config/hammerspoon/hotkeys.lua), [config/hammerspoon/init.lua](config/hammerspoon/init.lua)
