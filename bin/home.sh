@@ -343,6 +343,33 @@ pull_changes() {
 }
 
 #==================================================
+# Discard Command
+#==================================================
+
+discard_changes() {
+    cd "$SCRIPT_DIR" || exit 1
+
+    # Check if there are any changes to discard
+    if [[ -z "$(git status --porcelain)" ]]; then
+        echo "No changes to discard"
+        exit 0
+    fi
+
+    echo_h1 "Discarding changes"
+
+    # Show what will be discarded
+    git status --short
+
+    # Reset all tracked files
+    git reset --hard
+    echo -e "${COLOR_GREEN}Tracked files reset${COLOR_RESET}"
+
+    # Remove untracked files and directories
+    git clean -fd
+    echo -e "${COLOR_GREEN}Untracked files removed${COLOR_RESET}"
+}
+
+#==================================================
 # Update Command
 #==================================================
 
@@ -400,6 +427,10 @@ while [[ $# -gt 0 ]]; do
             COMMAND="pull"
             shift
             ;;
+        discard)
+            COMMAND="discard"
+            shift
+            ;;
         update)
             COMMAND="update"
             shift
@@ -413,6 +444,7 @@ while [[ $# -gt 0 ]]; do
             echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
             echo "  push       Commit and push all changes with AI-generated commit message"
             echo "  pull       Fetch and pull latest changes (requires clean working tree)"
+            echo "  discard    Discard all local changes and untracked files"
             echo "  update     Pull, run mise install, and reload fish shell"
             echo ""
             echo "Flags:"
@@ -432,7 +464,8 @@ if [[ -z "$COMMAND" ]]; then
     echo "  install    Create symlinks from home.toml (filtered by labels in config.toml)"
     echo "  push       Commit and push all changes with AI-generated commit message"
     echo "  pull       Fetch and pull latest changes (requires clean working tree)"
-            echo "  update     Pull, run mise install, and reload fish shell"
+    echo "  discard    Discard all local changes and untracked files"
+    echo "  update     Pull, run mise install, and reload fish shell"
     echo ""
     echo "Flags:"
     echo "  --dryrun   Print actions without executing them"
@@ -451,6 +484,10 @@ case "$COMMAND" in
         ;;
     pull)
         pull_changes
+        exit 0
+        ;;
+    discard)
+        discard_changes
         exit 0
         ;;
     update)
