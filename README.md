@@ -84,9 +84,9 @@ labels = ["macos", "cli", "dev"]
 
 ### Development Tools
 
-mise manages tool versions. Configuration files are symlinked using the same label system as above, with tools organized by label (e.g., `ai`, `dev`, `media`, `work`) to control which are installed on each machine.
+mise manages tool versions. Setting up the development environment uses the configuration management system described above—mise configuration files are symlinked with label-based filtering to control which tools are installed on each machine.
 
-**Relevant Files:** [config/mise/config.toml](config/mise/config.toml), [config/mise/ai.toml](config/mise/ai.toml), [config/mise/dev.toml](config/mise/dev.toml), [config/mise/media.toml](config/mise/media.toml), [config/mise/work.toml](config/mise/work.toml)
+**Relevant Files:** [config/mise](config/mise)
 
 ### App Launcher
 
@@ -110,9 +110,18 @@ Hold `hyper` and press multiple app keys in sequence. On release, queued apps ti
 ### Window Positioning
 
 `hyper`+number keys position the focused window using fractional screen width:
-- `1`-`0` for various left/right splits (25%, 33%, 50%, 67%, 75%)
-- `ß` for full width
-- `` ´ `` to move to next screen
-- `delete` to cycle windows of the current app
+- `hyper` + `1` — Left 25%
+- `hyper` + `2` — Right 75%
+- `hyper` + `3` — Left 33%
+- `hyper` + `4` — Right 67%
+- `hyper` + `5` — Left 50%
+- `hyper` + `6` — Right 50%
+- `hyper` + `7` — Left 67%
+- `hyper` + `8` — Right 33%
+- `hyper` + `9` — Left 75%
+- `hyper` + `0` — Right 25%
+- `hyper` + `ß` — Full width
+- `hyper` + `` ´ `` — Move to next screen (maximized)
+- `hyper` + `delete` — Cycle windows of the current app
 
 **Relevant Files:** [config/hammerspoon/hotkeys.lua](config/hammerspoon/hotkeys.lua), [config/hammerspoon/init.lua](config/hammerspoon/init.lua)
