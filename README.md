@@ -1,6 +1,22 @@
 # .home
 
-My personal dotfiles. Configs are stored here and symlinked onto the system. A label system controls which ones are active on a given machine.
+> **Personal Repository**
+> This is my personal system configuration, tailored specifically to my workflow and preferences. Feel free to browse and take inspiration, but be aware that using it directly will require significant customization for your setup.
+
+## What This Provides
+
+| Category | Description |
+|----------|-------------|
+| **Terminal Setup** | [Ghostty](https://ghostty.org/) terminal emulator with [Fish](https://fishshell.com/) shell and [Starship](https://starship.rs/) prompt. |
+| **Configuration Management** | Declarative symlink management with label-based filtering for multi-machine setups via custom `home` script. |
+| **Development Tools** | Version-managed toolchains and utilities via [mise](https://mise.jdx.dev/). |
+| **App Launcher** | Hyper key shortcuts for instant app focus and launch via [Hammerspoon](https://www.hammerspoon.org/). |
+| **Window Tiling** | Multi-app side-by-side layouts via sequential hyper key chords in Hammerspoon. |
+| **Window Positioning** | Numeric hotkeys for precise window placement (quarters, thirds, halves) in Hammerspoon. |
+
+## Prerequisites
+
+The `hyper` key (Cmd+Shift+Alt+Ctrl) is used throughout for app launching and window management. A tool like [Hyperkey](https://hyperkey.app/) is required to map CapsLock to this key combination.
 
 ## Setup
 
@@ -12,7 +28,15 @@ cp config.example.toml config.toml
 ./bootstrap.sh
 ```
 
-## Commands
+## Terminal Setup
+
+Ghostty terminal emulator configuration with Fish shell, Starship prompt, fzf.fish keybindings for fuzzy search, natural text selection, and mise activation.
+
+## Configuration Management
+
+Configurations are symlinked from this repository to system locations. `home.toml` defines source-to-target mappings with optional labels; `config.toml` declares the machine's active labels.
+
+### Commands
 
 | Command | Description |
 |---------|-------------|
@@ -22,8 +46,6 @@ cp config.example.toml config.toml
 | `home update` | Pull, run `mise install`, update Homebrew, and reload fish |
 
 All commands support `--dryrun` to print actions without executing them.
-
-## How It Works
 
 ### home.toml
 
@@ -40,10 +62,10 @@ target = "~/.config/mise/conf.d/ai.toml"
 labels = ["ai"]
 ```
 
-Label logic:
-- A plain string `"cli"` requires that label to be present
-- A nested array `["macos", "linux"]` is an OR — any one of them satisfies it
-- Multiple top-level elements are AND — all must be satisfied
+Label logic supports AND/OR combinations:
+- Plain string requires the label
+- Nested array is OR (any label matches)
+- Multiple top-level elements are AND (all must match)
 
 ### config.toml
 
@@ -53,118 +75,29 @@ Machine-local file (not committed) that declares which labels apply here:
 labels = ["macos", "cli", "dev"]
 ```
 
-## Configs
+## Development Tools
 
-### Fish
+mise manages tool versions. Configuration files are symlinked using the same label system as above, with tools organized by label (e.g., `ai`, `dev`, `media`, `work`) to control which are installed on each machine.
 
-Shell configuration at `~/.config/fish`. Includes:
-- [fzf.fish](https://github.com/PatrickF1/fzf.fish) bindings — fuzzy search for history, files, git log, git status, processes, and variables via super key chords
-- [natural-selection](https://github.com/sbrstrkkdwmdr/natural-selection) — text selection keybindings in the terminal
-- Starship prompt integration
-- mise activation
+## App Launcher
 
-### Starship
+Hammerspoon maps `hyper` key shortcuts to apps. Press `hyper`+letter to focus or launch an app. Multi-letter shortcuts are supported but must not conflict with single-letter prefixes.
 
-Prompt config at `~/.config/starship.toml`. Shows current directory, git branch and status, Docker context, and the current time. Uses a two-line layout with a `❯` character prompt.
+**Examples:** `hyper`+`e` for VS Code, `hyper`+`t` for Ghostty, `hyper`+`x` for Xcode.
 
-### Hammerspoon (macOS)
+## Window Tiling
 
-Full macOS automation via [Hammerspoon](https://www.hammerspoon.org/), symlinked to `~/.hammerspoon`. Includes:
+Hold `hyper` and press multiple app keys in sequence. On release, queued apps tile side-by-side with equal width distribution. Press the same key multiple times to increase that app's relative width. Use `hyper`+`space` to split multiple windows of the same app.
 
-- **App launcher + tiling** — launch and arrange apps into side-by-side layouts with the hyper key, see below
-- **Window positioning hotkeys** — see below
-- **Safari bookmark launcher** — hyper+`b` opens a fuzzy search over Safari bookmarks
+**Examples:**
+- `e` `t` — VS Code and Ghostty, equal width
+- `e` `e` `t` — VS Code takes 2/3, Ghostty takes 1/3
+- `e` `space` `e` — Two VS Code windows, equal width
 
-### Ghostty
+## Window Positioning
 
-Terminal emulator config, symlinked to the platform-appropriate location (`~/Library/Application Support/com.mitchellh.ghostty` on macOS, `~/.config/ghostty` on Linux).
-
-### mise
-
-Tool version manager configs at `~/.config/mise/`. Tools are split into label-gated groups:
-
-|  Label  | Tools |
-|---------|-------|
-| `ai`    | Claude Code |
-| `dev`   | Node (LTS), Python, uv, gh, fresh-editor |
-| `media` | ffmpeg, yt-dlp |
-| `work`  | aws-sso |
-
-### Xcode Color Theme (dev-apple)
-
-Installs the [Aura Soft Dark](https://github.com/daltonmenezes/aura-theme) theme to Xcode's color themes directory.
-
----
-
-## Tiling Window Manager
-
-Hammerspoon is used to launch, focus, and arrange apps into side-by-side layouts using a **hyper key** (Cmd+Shift+Alt+Ctrl).
-
-### App Shortcuts
-
-Apps are registered to letter shortcuts. Press hyper+letter to focus or launch that app:
-
-| Key | App |
-|-----|-----|
-| `t` | Ghostty |
-| `w` | Safari |
-| `e` | VS Code |
-| `f` | Finder |
-| `g` | Tower |
-| `c` | Slack |
-| `d` | Discord |
-| `v` | Teams |
-| `x` | Xcode |
-| `nn` | Notion |
-| `no` | Notes |
-| `pw` | 1Password |
-| `mm` | Messages |
-| `mo` | Outlook |
-| `ms` | Signal |
-| `mw` | WhatsApp |
-| `mu` | Music |
-| `ph` | Photos |
-| `pl` | Plex |
-| `ad` | Affinity Designer |
-| `ap` | Affinity Photo |
-| `os` | OpenSCAD |
-| `sl` | PrusaSlicer |
-
-Multi-letter shortcuts must not share a prefix with single-letter ones — conflicting sequences are not resolved automatically.
-
-### Tiling
-
-Hold hyper and press multiple app keys in sequence. When hyper is released, all queued apps are tiled side-by-side on screen, dividing the width equally. Pressing the same app key multiple times increases its weight (relative width).
-
-Press hyper+`space` between apps to force a split between tiles of the same app.
-
-If only one app is queued, it is focused or launched without any layout being applied.
-
-| Keys | Result |
-|------|--------|
-| `nn` | Focus or launch Notion |
-| `e` `t` | VS Code and Ghostty side by side, equal width |
-| `e` `t` `w` | VS Code, Ghostty, and Safari in three equal columns |
-| `e` `e` | VS Code full width |
-| `nn` `space` `nn` | Two Notion windows side by side, equal width |
-| `e` `space` `e` `t` | Two VS Code windows in equal left columns, Ghostty on the right |
-
-### Window Positioning
-
-Manual window placement with hyper+number (positions are `x-offset, width` as fractions of screen width):
-
-| Key | Position |
-|-----|----------|
-| `1` | Left 25% |
-| `2` | Right 75% |
-| `3` | Left 33% |
-| `4` | Right 67% |
-| `5` | Left 50% |
-| `6` | Right 50% |
-| `7` | Left 67% |
-| `8` | Right 33% |
-| `9` | Left 75% |
-| `0` | Right 25% |
-| `ß` | Full width |
-| `` ´ `` | Move to next screen (maximized) |
-| `delete` | Cycle windows of the current app |
+`hyper`+number keys position the focused window using fractional screen width:
+- `1`-`0` for various left/right splits (25%, 33%, 50%, 67%, 75%)
+- `ß` for full width
+- `` ´ `` to move to next screen
+- `delete` to cycle windows of the current app
