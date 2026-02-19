@@ -42,7 +42,7 @@ local M = {}
 -- Configuration
 --------------------------------------------------
 
-local PADDING = 8
+local PADDING = 0
 local CASCADE_OFFSET_X = 0
 local CASCADE_OFFSET_Y = 0
 
@@ -55,6 +55,28 @@ local ActionType = {
 local actionQueue = {}
 local registeredApps = {}
 local registeredLetters = {}
+
+--------------------------------------------------
+-- Forward Declarations
+--------------------------------------------------
+
+local processQueue
+local convertLetterActionsToAppActions
+local consolidateActions
+local createTilesFromActions
+local layoutTiles
+local distributeWindowsToTiles
+local layoutTilesOnScreen
+local layoutWindow
+local createFocusOrLayoutAction
+local createSplitAction
+local createLetterAction
+local ensureAppRunning
+local collectAllWindows
+local bringWindowsToFront
+local isHyperHeld
+local determineTargetScreen
+local restoreFocus
 
 --------------------------------------------------
 -- Public API
@@ -381,24 +403,21 @@ function layoutTilesOnScreen(screenFrame, tiles)
 end
 
 function layoutWindow(window, screenFrame, weight, tilePosition, windowIndex, windowCount)
-  -- Calculate padding
-  local halfPadding = PADDING / 2
-  local paddedScreen = hs.geometry.rect(
-    screenFrame.x + halfPadding,
-    screenFrame.y + halfPadding,
-    screenFrame.w - PADDING,
-    screenFrame.h - PADDING
-  )
-
   -- Calculate cascade offsets
   local cascadeOffsetX = CASCADE_OFFSET_X * (windowCount - 1)
   local cascadeOffsetY = CASCADE_OFFSET_Y * (windowCount - 1)
 
-  -- Calculate window frame
-  local x = paddedScreen.x + paddedScreen.w * tilePosition + halfPadding + CASCADE_OFFSET_X * windowIndex
-  local y = paddedScreen.y + halfPadding + CASCADE_OFFSET_Y * windowIndex
-  local width = paddedScreen.w * weight - PADDING - cascadeOffsetX
-  local height = paddedScreen.h - PADDING - cascadeOffsetY
+  -- Calculate available space for windows (screen minus padding on all sides)
+  local availableX = screenFrame.x + PADDING
+  local availableY = screenFrame.y + PADDING
+  local availableWidth = screenFrame.w - (2 * PADDING)
+  local availableHeight = screenFrame.h - (2 * PADDING)
+
+  -- Calculate window frame with padding between tiles
+  local x = availableX + availableWidth * tilePosition + CASCADE_OFFSET_X * windowIndex
+  local y = availableY + CASCADE_OFFSET_Y * windowIndex
+  local width = availableWidth * weight - PADDING - cascadeOffsetX
+  local height = availableHeight - cascadeOffsetY
 
   -- Apply frame
   window:setFrame(hs.geometry.rect(x, y, width, height), 0)
