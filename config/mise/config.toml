@@ -3,3 +3,8 @@ fzf = "latest"
 node = "lts"
 jq = "latest"
 "npm:figlet" = "latest"
+
+[env]
+NPM_CONFIG_CACHE = "~/.home/cache/npm-cache"
+NPM_CONFIG_PREFIX = "~/.home/cache/npm-global"
+npm_config_devdir = "~/.home/cache/npm-gyp"

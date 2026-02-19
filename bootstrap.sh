@@ -25,5 +25,7 @@ elif [[ "$OS" == "Linux" ]]; then
     bootstrap_linux
 fi
 
+# Create cache directory
+mkdir -p ~/.cache
 
 ~/.home/bin/home.sh install

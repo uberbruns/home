@@ -3,7 +3,7 @@
 #==================================================
 
 fish_add_path ~/.rd/bin
-fish_add_path /.npm-global/bin
+fish_add_path ~/.home/cache/npm-global/bin
 fish_add_path /Users/prefect/.local/bin
 fish_add_path /opt/homebrew/bin
 
