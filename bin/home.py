@@ -10,11 +10,11 @@ import sys
 
 from homelib import (
     Config,
-    discard_changes,
-    install_symlinks,
-    pull_changes,
-    push_changes,
-    update_system,
+    execute_discard,
+    execute_install,
+    execute_pull,
+    execute_push,
+    execute_update,
 )
 from homelib.output import print_error, print_info
 
@@ -57,15 +57,15 @@ Flags:
     # Execute requested command
     try:
         if args.command == 'install':
-            install_symlinks(config)
+            execute_install(config)
         elif args.command == 'push':
-            push_changes(config)
+            execute_push(config)
         elif args.command == 'pull':
-            pull_changes(config)
+            execute_pull(config)
         elif args.command == 'discard':
-            discard_changes(config)
+            execute_discard(config)
         elif args.command == 'update':
-            update_system(config)
+            execute_update(config)
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)
     except KeyboardInterrupt:

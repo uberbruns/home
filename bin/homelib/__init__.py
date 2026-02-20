@@ -1,12 +1,10 @@
 """Home configuration management library."""
 
-from .commands import (
-    discard_changes,
-    install_symlinks,
-    pull_changes,
-    push_changes,
-    update_system,
-)
+from .command_discard import execute_discard
+from .command_install import execute_install
+from .command_pull import execute_pull
+from .command_push import execute_push
+from .command_update import execute_update
 from .config import Config
 from .models import (
     HomeEntry,
@@ -26,9 +24,9 @@ __all__ = [
     'SymlinkResult',
     'SymlinkStatus',
     # Commands
-    'install_symlinks',
-    'push_changes',
-    'pull_changes',
-    'discard_changes',
-    'update_system',
+    'execute_install',
+    'execute_push',
+    'execute_pull',
+    'execute_discard',
+    'execute_update',
 ]

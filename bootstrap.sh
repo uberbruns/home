@@ -28,4 +28,4 @@ fi
 # Create cache directory
 mkdir -p ~/.cache
 
-~/.home/bin/home.py install
+~/.home/bin/home.py update

@@ -25,11 +25,16 @@ class Config:
 
     def __init__(self):
         # Resolve repository root directory
-        self.script_dir = Path(__file__).parent.parent.parent.resolve()
+        self.repo_root = Path(__file__).parent.parent.parent.resolve()
+
+        # Validate repository is a git directory
+        if not (self.repo_root / ".git").exists():
+            print(f"Error: Not a git repository: {self.repo_root}", file=sys.stderr)
+            sys.exit(1)
 
         # Configuration file paths
-        self.home_toml = self.script_dir / "home.toml"
-        self.config_toml = self.script_dir / "config.toml"
+        self.home_toml = self.repo_root / "home.toml"
+        self.config_toml = self.repo_root / "config.toml"
 
         # Runtime flags
         self.dryrun = False

@@ -155,17 +155,17 @@ class HomeEntry:
         # All requirements must be satisfied (AND logic)
         return all(req.matches(config_labels) for req in self.requirements)
 
-    def resolve_source_path(self, script_dir: Path) -> Path:
+    def resolve_source_path(self, repo_root: Path) -> Path:
         """
-        Resolve the source path relative to script directory.
+        Resolve the source path relative to repository root.
 
         Args:
-            script_dir: Root directory of the repository
+            repo_root: Root directory of the repository
 
         Returns:
             Absolute path to source
         """
-        return script_dir / self.source
+        return repo_root / self.source
 
     def resolve_target_path(self) -> Path:
         """
