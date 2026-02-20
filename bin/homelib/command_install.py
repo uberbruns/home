@@ -20,9 +20,9 @@ def execute_install(config: Config) -> list[SymlinkResult]:
     Process:
     1. Parse all possible operations from home.toml
     2. Filter operations by current labels
-    3. Find obsolete operations (all - filtered)
+    3. Find discarded operations (all - filtered)
     4. Apply filtered operations (install/update)
-    5. Apply obsolete operations (remove)
+    5. Apply discarded operations (remove)
 
     Args:
         config: Configuration object
@@ -41,11 +41,11 @@ def execute_install(config: Config) -> list[SymlinkResult]:
 
     # Filter operations by labels
     matching_operations = [op for op in all_operations if op.entry.matches_labels(labels)]
-    obsolete_operations = list(set(all_operations) - set(matching_operations))
+    discarded_operations = list(set(all_operations) - set(matching_operations))
 
     # Execute operations and collect results
     results = execute_matching_operations(config, matching_operations)
-    execute_obsolete_operations(config, obsolete_operations, results)
+    execute_discarded_operations(config, discarded_operations, results)
 
     return results
 
@@ -67,9 +67,9 @@ def execute_matching_operations(config: Config, operations: list[SymlinkOperatio
     return results
 
 
-def execute_obsolete_operations(config: Config, operations: list[SymlinkOperation], results: list[SymlinkResult]) -> None:
-    """Execute and print results for obsolete symlink operations."""
-    # Process each obsolete operation
+def execute_discarded_operations(config: Config, operations: list[SymlinkOperation], results: list[SymlinkResult]) -> None:
+    """Execute and print results for discarded symlink operations."""
+    # Process each discarded operation
     for operation in operations:
         result = apply_removal_operation(config, operation)
 
@@ -156,7 +156,7 @@ def apply_install_operation(config: Config, operation: SymlinkOperation) -> Syml
 
 def apply_removal_operation(config: Config, operation: SymlinkOperation) -> SymlinkResult | None:
     """
-    Apply a symlink removal operation for obsolete entries.
+    Apply a symlink removal operation for discarded entries.
 
     Args:
         config: Configuration object
