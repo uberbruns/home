@@ -12,4 +12,4 @@ SETUVAR fish_cursor_insert:block
 SETUVAR fish_cursor_replace_one:underscore
 SETUVAR fish_cursor_visual:block
 SETUVAR fish_greeting:
-SETUVAR fish_user_paths:/Users/karsten/\x2erd/bin\x1e/opt/homebrew/bin\x1e/Users/prefect/\x2elocal/bin
+SETUVAR fish_user_paths:/Users/karsten/\x2ehome/bin\x1e/Users/karsten/\x2ehome/config/fish/bin\x1e/Users/karsten/\x2erd/bin\x1e/opt/homebrew/bin\x1e/Users/prefect/\x2elocal/bin

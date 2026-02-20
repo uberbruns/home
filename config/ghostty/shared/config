@@ -14,13 +14,5 @@ window-padding-y = 12
 cursor-style = block
 cursor-style-blink = true
 
-# Quick terminal configuration
-quick-terminal-position = center
-quick-terminal-animation-duration = 0
-quick-terminal-size = 800px,400px
-
-
-keybind = global:ctrl+shift+alt+super+enter=toggle_quick_terminal
-
 config-file = ?~/.config/ghostty-linux/config
 config-file = ?~/.config/ghostty-macos/config

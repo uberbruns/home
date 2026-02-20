@@ -18,7 +18,6 @@ local tiling = require("tiling")
 -- \___/\___/_//_/_//_/\_, /\_,_/_/  \__/
 --                    /___/
 
-require("autoreload")
 require("bookmarks")
 require("hyperkey")
 
@@ -48,6 +47,11 @@ tiling.registerApp("t", "com.mitchellh.ghostty")
 tiling.registerApp("w", "com.apple.Safari")
 tiling.registerApp("x", "com.apple.dt.Xcode")
 tiling.setSplitKey("space")
+
+-- Quick Access Terminal
+hs.hotkey.bind({"cmd", "shift"}, "space", function()
+  hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal", "quick-access-apps"}):start()
+end)
 
 -- Window Focus
 bindCycleWindows("delete")

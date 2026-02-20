@@ -1,0 +1,7 @@
+#!/opt/homebrew/bin/fish
+
+cd ~
+mdfind 'kMDItemContentType == "com.apple.application-bundle"' \
+    | fzf --prompt="Launch app: " --no-hscroll --border=bold \
+    --bind "enter:accept" | xargs -r open
+exit

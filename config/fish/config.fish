@@ -6,6 +6,7 @@ test -d ~/.rd/bin && fish_add_path ~/.rd/bin
 fish_add_path ~/.home/cache/npm-global/bin
 fish_add_path /Users/prefect/.local/bin
 fish_add_path /opt/homebrew/bin
+fish_add_path ~/.home/bin
 
 #==================================================
 # Tools
@@ -80,5 +81,4 @@ if status is-interactive
     bind super-shift-z     '_natural_selection redo'
     bind ''                kill-selection end-selection self-insert
   end
-
 end
