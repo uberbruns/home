@@ -48,10 +48,15 @@ tiling.registerApp("w", "com.apple.Safari")
 tiling.registerApp("x", "com.apple.dt.Xcode")
 tiling.setSplitKey("space")
 
--- Quick Access Terminal
+--Quick Access Terminal
 hs.hotkey.bind({"cmd", "shift"}, "space", function()
   hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal", "quick-access-apps"}):start()
 end)
+
+-- hs.hotkey.bind({"cmd", "shift"}, "space", function()
+--   hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal", "quick-access-clipboard"}):start()
+-- end)
+
 
 -- Window Focus
 bindCycleWindows("delete")

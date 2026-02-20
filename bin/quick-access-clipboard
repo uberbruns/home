@@ -1,0 +1,5 @@
+#!/opt/homebrew/bin/fish
+
+cd ~
+clipse
+exit

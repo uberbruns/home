@@ -1,10 +1,12 @@
 [tools]
 bat = "latest"
 fzf = "latest"
+go = "latest"
 node = "lts"
 jq = "latest"
 "npm:figlet" = "latest"
 yazi = "latest"
+"go:github.com/savedra1/clipse" = "latest"
 
 [env]
 NPM_CONFIG_CACHE = "~/.home/cache/npm-cache"
