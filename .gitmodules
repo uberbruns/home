@@ -1,3 +1,9 @@
 [submodule "externals/daltonmenezes/aura-theme"]
 	path = externals/daltonmenezes/aura-theme
 	url = https://github.com/daltonmenezes/aura-theme
+[submodule "externals/ghostty-org/website"]
+	path = externals/ghostty-org/website
+	url = https://github.com/ghostty-org/website
+[submodule "externals/Hammerspoon/hammerspoon.github.io"]
+	path = externals/Hammerspoon/hammerspoon.github.io
+	url = https://github.com/Hammerspoon/hammerspoon.github.io

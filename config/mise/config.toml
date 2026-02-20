@@ -1,8 +1,10 @@
 [tools]
+bat = "latest"
 fzf = "latest"
 node = "lts"
 jq = "latest"
 "npm:figlet" = "latest"
+yazi = "latest"
 
 [env]
 NPM_CONFIG_CACHE = "~/.home/cache/npm-cache"
