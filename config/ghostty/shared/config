@@ -1,0 +1,19 @@
+#    ___
+#   / _ | ___  ___  ___ ___ ________ ____  _______
+#  / __ |/ _ \/ _ \/ -_) _ `/ __/ _ `/ _ \/ __/ -_)
+# /_/ |_/ .__/ .__/\__/\_,_/_/  \_,_/_//_/\__/\__/
+#      /_/  /_/
+
+font-family = Source Code Pro for Powerline
+font-size = 15
+adjust-cell-height = 10%
+
+theme = Aura
+window-padding-x = 12
+window-padding-y = 12
+cursor-style = block
+cursor-style-blink = true
+
+
+config-file = ?~/.config/ghostty-linux/config
+config-file = ?~/.config/ghostty-macos/config

@@ -20,6 +20,7 @@ class Color:
     GREEN = '\033[32m'
     YELLOW = '\033[33m'
     BLUE = '\033[34m'
+    GRAY = '\033[90m'
 
 
 # ============================================================
@@ -58,7 +59,7 @@ def print_key_value(key: str, value: str) -> None:
     print(f"{Color.CYAN}{key}:{Color.RESET} {value}")
 
 
-def print_symlink_status(table_name: str, status: str, status_color: str, target_path: str) -> None:
+def print_symlink_status(table_name: str, status: str, status_color: str, target_path: str, monochrome: bool = False) -> None:
     """
     Print a formatted symlink operation status line.
 
@@ -67,5 +68,9 @@ def print_symlink_status(table_name: str, status: str, status_color: str, target
         status: Status message (e.g., "Already exists", "Created")
         status_color: Color constant for the status (e.g., Color.BLUE, Color.GREEN)
         target_path: Path to the symlink target
+        monochrome: If True, use status_color for the entire line
     """
-    print(f"[{Color.CYAN}{table_name}{Color.RESET}] {status_color}{status}{Color.RESET} -> {target_path}")
+    if monochrome:
+        print(f"{status_color}[{table_name}] {status} -> {target_path}{Color.RESET}")
+    else:
+        print(f"[{Color.CYAN}{table_name}{Color.RESET}] {status_color}{status}{Color.RESET} -> {target_path}")

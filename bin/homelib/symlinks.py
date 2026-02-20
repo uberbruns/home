@@ -122,10 +122,40 @@ def apply_install_operation(config: Config, operation: SymlinkOperation) -> Syml
 
     # Check if target already exists as symlink
     if operation.target_path.is_symlink():
-        return SymlinkResult(
-            operation=operation,
-            status=SymlinkStatus.ALREADY_EXISTS
-        )
+        try:
+            # Resolve the existing symlink
+            existing_target = operation.target_path.resolve()
+
+            # Check if symlink points to our source (already correct)
+            if existing_target == operation.source_path.resolve():
+                return SymlinkResult(
+                    operation=operation,
+                    status=SymlinkStatus.ALREADY_EXISTS
+                )
+
+            # Check if symlink points into .home directory
+            if existing_target.is_relative_to(config.script_dir):
+                # Remove old symlink and recreate with new target
+                if config.dryrun:
+                    status = SymlinkStatus.OVERRIDDEN_DRYRUN
+                else:
+                    operation.target_path.unlink()
+                    operation.target_path.symlink_to(operation.source_path)
+                    status = SymlinkStatus.OVERRIDDEN
+
+                return SymlinkResult(operation=operation, status=status)
+
+            # Symlink points outside .home, skip
+            return SymlinkResult(
+                operation=operation,
+                status=SymlinkStatus.ALREADY_EXISTS
+            )
+        except Exception:
+            # Cannot resolve symlink, skip
+            return SymlinkResult(
+                operation=operation,
+                status=SymlinkStatus.ALREADY_EXISTS
+            )
 
     # Check if target exists but is not a symlink
     if operation.target_path.exists():
@@ -231,10 +261,12 @@ def install_symlinks(config: Config) -> list[SymlinkResult]:
         if result.status == SymlinkStatus.SKIPPED_SOURCE_NOT_FOUND:
             print_error(f"[{result.table_name}] Source not found -> {result.operation.source_path}")
         elif result.status == SymlinkStatus.ALREADY_EXISTS:
-            print_symlink_status(result.table_name, result.status.value, Color.BLUE, str(result.target_path))
+            print_symlink_status(result.table_name, result.status.value, Color.GRAY, str(result.target_path), monochrome=True)
         elif result.status == SymlinkStatus.SKIPPED_NOT_SYMLINK:
             print_symlink_status(result.table_name, result.status.value, Color.YELLOW, str(result.target_path))
         elif result.status in (SymlinkStatus.CREATED, SymlinkStatus.CREATED_DRYRUN):
+            print_symlink_status(result.table_name, result.status.value, Color.GREEN, str(result.target_path))
+        elif result.status in (SymlinkStatus.OVERRIDDEN, SymlinkStatus.OVERRIDDEN_DRYRUN):
             print_symlink_status(result.table_name, result.status.value, Color.GREEN, str(result.target_path))
 
     # Apply obsolete operations (cleanup)

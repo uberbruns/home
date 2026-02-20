@@ -20,6 +20,8 @@ class SymlinkStatus(Enum):
     ALREADY_EXISTS = "Exists"
     CREATED = "Created"
     CREATED_DRYRUN = "Created (Not executed)"
+    OVERRIDDEN = "Overridden"
+    OVERRIDDEN_DRYRUN = "Overridden (Not executed)"
     SKIPPED_NOT_SYMLINK = "Skipped (not a symlink)"
     SKIPPED_SOURCE_NOT_FOUND = "Skipped (source not found)"
     REMOVED = "Removed"
@@ -241,4 +243,6 @@ class SymlinkResult:
             SymlinkStatus.ALREADY_EXISTS,
             SymlinkStatus.CREATED,
             SymlinkStatus.CREATED_DRYRUN,
+            SymlinkStatus.OVERRIDDEN,
+            SymlinkStatus.OVERRIDDEN_DRYRUN,
         )
