@@ -1,0 +1,1 @@
+alias claude2="CLAUDE_CONFIG_DIR=~/.claude2 claude"
