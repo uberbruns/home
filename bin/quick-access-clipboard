@@ -1,5 +1,51 @@
 #!/opt/homebrew/bin/fish
 
+# ── Docs ─────────────────────────────────────────────────────────
+
+# Displays clipboard history via clipse in fzf. Selecting an entry
+# copies it to the clipboard.
+#
+# Index format: <search key> \t <display> \t <action>
+
+
+# ── Implementation ──────────────────────────────────────────────
+
+set raw_file (mktemp)
+
+# Builds index rows from clipboard history via clipse.
+# Writes raw JSON entries to $raw_file for preview.
+function make_index
+    set -l i 0
+    for raw_entry in (clipse -output-all raw)
+        set i (math $i + 1)
+
+        # Flatten to single line for display and search
+        set preview (string sub -s 2 -l (math (string length -- $raw_entry) - 2) -- $raw_entry)
+        set preview (string replace -a '\\n' ' ' -- $preview)
+        set preview (string replace -a '\\t' ' ' -- $preview)
+        set preview (string replace -a '\\"' '"' -- $preview)
+
+        # Store raw entry for preview
+        echo $raw_entry >>$raw_file
+
+        # Build index row
+        set action "printf '%s' '$raw_entry' | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))' | clipse -c"
+        printf '%s\t%s\t%s\t%s\n' $preview $preview $i $action
+    end
+end
+
+
+# ── Main ─────────────────────────────────────────────────────────
+
 cd ~
-clipse
-exit
+set preview_cmd "sed -n '{3}p' $raw_file | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))'"
+set selection (make_index | fzf --ansi --prompt="❯ " --no-hscroll --border=bold \
+    --delimiter='\t' --nth=1 --with-nth=2 -i \
+    --preview "$preview_cmd" --preview-window=right:50%:wrap \
+    --bind "enter:accept")
+rm -f $raw_file
+if test -n "$selection"
+    eval (string split \t -- $selection)[4]
+    return 0
+end
+return 1
