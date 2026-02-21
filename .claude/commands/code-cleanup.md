@@ -1,57 +1,55 @@
 Reorganize code within files to follow a logical structure that improves readability and maintainability.
 
-### Remove obsolete code
+Apply each item systematically.
 
-1. **Remove Obsolete** - Remove obsolete code
-2. **Inline Trivial** - Inline trivial code that only has one or two callers without doing anything smart
+### Remove Obsolete Code
 
+- [ ] Remove dead/unused code
+- [ ] Inline trivial code with only one or two callers
+
+### Refactoring
+
+- [ ] Extract non-trivial repeated code into dedicated functions
+- [ ] Extract pure supporting logic into utility functions
+- [ ] Methods access state via properties, not redundant arguments
+- [ ] Restrict access levels to the minimum required visibility
 
 ### Function Body
 
-1. **Comments** - Function bodies should contain one-line subheader-like comments that didactically describe what the next block(s) of code will be about. These comments serve as internal documentation to guide readers through the logic flow.
-
-2. **Construction Flow** - Function bodies should create and transform content by performing deep leaf operations and constructions first and then systematically walk the tree until the final root transformation or creation is reached and the final action is executed or value is returned.
-
-3. Lead a function by checking preconditions first. Avoid return in the middle of a function body.
-
+- [ ] Check preconditions first; avoid mid-body returns
+- [ ] Add one-line subheader comments describing each block's purpose
+- [ ] Order operations leaf-first, building up to the final root transformation or return value
+- [ ] Alphabetically order sequential accesses to properties of the same object when order is irrelevant
 
 ### Function Docs
 
-1. Only public functions or entry points should get a full documentation.
-2. Implementation detail functions only get a single line documentation. Only complec function get 2-3.
-
+- [ ] Full documentation for public functions and entry points only
+- [ ] Single-line docs for implementation details (2-3 lines for complex functions)
 
 ### Naming
 
-1. **Variables** - Avoid overly generic variable names and needless abbreviations. Names should clearly communicate purpose and meaning without requiring additional context.
-2. **Functions** - Ensure that function name and purpose match and are easy to grasp.
-3. **Consistency** - Ensure that through the flow of functions variable names stay consistent or stay related if they describe the same concept. Pick a name and stick with it. Avoid synonyms.
-4. **Symmetry** - Create symmetry between similarly named functions and symbols. If possible, make the names of similarly named functions and symbols start with the same terms.
-5. **Function Pattern** - For functions prefer the pattern <verb> + (optional <clarifying adjective>) + <noun> + (optional <specific context>)
-6. **State Pattern** - For state constants and enums prefer the pattern <gerund/noun> + <verb (past-tense)> + (optional <specific context>)
-7. **Specificity** - Avoid overly generic terms when more specific terms are available. Use the symbol or function doc as reference for terms that make a symbol or function unique.
+- [ ] **Consistency** - Same concept uses same name (or name variant) across function flow; avoid synonyms
+- [ ] **Variables** - Specific, unabbreviated names that communicate purpose without extra context
+- [ ] **Functions** - Name and purpose match and are easy to grasp
+- [ ] **Specificity** - Prefer precise terms over generic ones; derive from symbol/function docs
+- [ ] **Symmetry** - Similarly purposed functions may share leading terms
+- [ ] **Object pattern** - `<adjective>?` + `<noun>` (e.g. `User`, `CachedTokenProvider`)
+- [ ] **Function pattern** - `<verb>` + `<adjective>?` + `<noun>` + `<context>?` (e.g. `fetchActiveUsers`, `validateInputFormat`, `buildNavigationStack`)
+- [ ] **State pattern** - `<gerund/noun>` + `<verb (past-tense)>` + `<context>?` (e.g. `loadingFinished`, `connectionEstablished`, `dataSynchronized`)
 
+### File Structure
 
+- [ ] Order: Imports > Configuration > Implemementation > Exports/Main Invocation
 
-### Overall File Structure
+### Implemementation
 
-Files are organized in this order:
-
-1. **Imports/Requirements** - All external dependencies
-2. **Configuration** - Constants, types, enums, configuration objects
-3. **Source Code** - Functions, classes, methods (see ordering below)
-4. **Exports/Main Invocation** - Module exports or main entry point execution
-
-### Source Code Ordering
-
-Within the source code section, organize in this priority:
-
-1. **Lifecycle Code** - Initialization, setup, teardown, constructors, destructors
-2. **Entry Points** - Main functions, public API, command handlers
-3. **Implementation Details** - Core logic, business rules, algorithms. Create sections for similar functions that work in a similar context or on similar data structures.
-4. **Supporting Code** - Helper functions, utilities, formatters, validators
-5. **Alphabetical Order** - Within each section, use alphabetical order for functions and symbols that are on an equal level.
+- [ ] Properties
+- [ ] Lifecycle (init, setup, teardown)
+- [ ] Entry points (public API, command handlers)
+- [ ] Implementation details (core logic, grouped by context/data structure operated on)
+- [ ] Supporting code (helpers, utilities, formatters, validators)
+- [ ] Alphabetical order within each section for equal-level symbols
 
 ### Section Separators
 
-Logically related symbols and functions should be separated from other sections using ASCII art comment separators matching the language conventions:
+- [ ] Separate logical sections with ASCII art comment separators matching language conventions
