@@ -1,12 +1,13 @@
 [tools]
 bat = "latest"
+fastfetch = "latest"
 fzf = "latest"
 go = "latest"
-node = "lts"
 jq = "latest"
-"npm:figlet" = "latest"
+node = "lts"
 yazi = "latest"
 "go:github.com/savedra1/clipse" = "latest"
+"npm:figlet" = "latest"
 
 [env]
 GOPATH = "{{env.HOME}}/.home/cache/go"
