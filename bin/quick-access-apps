@@ -1,21 +1,83 @@
 #!/opt/homebrew/bin/fish
 
 # ── Docs ─────────────────────────────────────────────────────────
+
 # Searches for macOS apps via Spotlight and opens a selection in
 # fzf. Results are filtered to limit directory depth and exclude
 # apps nested inside bundles (e.g. Xcode.app/Contents/...).
+# fzf matches against the full path but displays only the app name.
+#
+# Index format: <search key> \t <display> \t <action>
+
 
 # ── Config ───────────────────────────────────────────────────────
-set max_depth 5
+
+set line_width 88
+set max_path_depth 5
+set max_details_width 40
+
 
 # ── Implementation ───────────────────────────────────────────────
+
+function find_app_paths
+    mdfind 'kMDItemContentType == "com.apple.application-bundle"' \
+        | grep -E "^(/[^/]+){1,$max_path_depth}\$" \
+        | grep -v '/[^/]*\.[^/]*/.*\.app$' \
+        | sort
+end
+
+function make_app_index
+    for app_path in (find_app_paths)
+        # Extract components
+        set action "open $app_path"
+        set app_dir (string replace -r '/[^/]+$' '' -- $app_path)
+        set app_name (string replace -r '.*/(.+)\.app$' '$1' -- $app_path)
+
+        # Build index row
+        set display (format_row "App" "34" $app_name $app_dir)
+        printf '%s\t%s\t%s\n' $app_path $display $action
+    end
+end
+
+function make_index
+    make_app_index
+end
+
+
+# ── Supporting Code ──────────────────────────────────────────────
+
+function format_row --argument-names type_label type_color title details
+    # Truncate details
+    if test (string length -- $details) -gt $max_details_width
+        set details (string sub -l (math $max_details_width - 2) -- $details)..
+    end
+
+    # Build colored type tag
+    set tag (printf '\e[%sm[%s]\e[0m' $type_color $type_label)
+    set tag_len (math 2 + (string length -- $type_label))
+
+    # Calculate padding between title and details
+    set details_len (string length -- $details)
+    set title_len (string length -- $title)
+    set padding_len (math "$line_width - $tag_len - 1 - $title_len - $details_len")
+    if test $padding_len -lt 1
+        set padding_len 1
+    end
+    set padding (string repeat -n $padding_len ' ')
+
+    # Compose row
+    printf '%s %s%s\e[90m%s\e[0m' $tag $title $padding $details
+end
+
+
+# ── Main ─────────────────────────────────────────────────────────
+
 cd ~
-set app (mdfind 'kMDItemContentType == "com.apple.application-bundle"' \
-    | grep -E "^(/[^/]+){1,$max_depth}\$" \
-    | grep -v '/[^/]*\.[^/]*/.*\.app$' \
-    | fzf --prompt="Launch app: " --no-hscroll --border=bold \
+set selection (make_index | fzf --ansi --prompt="❯ " --no-hscroll --border=bold \
+    --delimiter='\t' --nth=1 --with-nth=2 \
     --bind "enter:accept")
-if test -n "$app"
-    open "$app"
+if test -n "$selection"
+    set action (string split \t -- $selection)[3]
+    eval $action
     exit
 end
