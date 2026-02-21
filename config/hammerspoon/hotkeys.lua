@@ -7,7 +7,7 @@ end
 
 local function bindAppByBundle(key, bundleID)
   hs.hotkey.bind(hyper, key, function()
-    tiling.launchOrFocusOrLayoutByBundle(bundleID)
+    tiling.queueAppForLayout(bundleID)
   end)
 end
 
