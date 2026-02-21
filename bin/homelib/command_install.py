@@ -81,38 +81,23 @@ def execute_discarded_operations(config: Config, operations: list[SymlinkOperati
 
 
 def parse_symlink_operations(config: Config) -> list[SymlinkOperation]:
-    """
-    Parse all symlink operations from home.toml without filtering.
-
-    Args:
-        config: Configuration object
-
-    Returns:
-        List of all possible symlink operations
-    """
+    """Parse all symlink operations from home.toml without filtering."""
     # Load home.toml configuration
     home_config = load_toml(config.home_toml)
     operations: list[SymlinkOperation] = []
 
-    # Process each table entry
-    for table_name, table_entries in home_config.items():
-        if isinstance(table_entries, dict):
-            # Single table entry
-            entry = HomeEntry.from_toml(table_name, table_entries)
+    # Build operations from each table
+    for table_name, table_data in home_config.items():
+        # Normalize single dict entries into a list
+        entry_dicts = [table_data] if isinstance(table_data, dict) else table_data if isinstance(table_data, list) else []
+
+        for entry_dict in entry_dicts:
+            entry = HomeEntry.from_toml(table_name, entry_dict)
             operations.append(SymlinkOperation(
                 entry=entry,
                 source_path=entry.resolve_source_path(config.repo_root),
-                target_path=entry.resolve_target_path()
+                target_path=entry.resolve_target_path(),
             ))
-        elif isinstance(table_entries, list):
-            # Array of table entries
-            for entry_data in table_entries:
-                entry = HomeEntry.from_toml(table_name, entry_data)
-                operations.append(SymlinkOperation(
-                    entry=entry,
-                    source_path=entry.resolve_source_path(config.repo_root),
-                    target_path=entry.resolve_target_path()
-                ))
 
     return operations
 
@@ -122,21 +107,12 @@ def parse_symlink_operations(config: Config) -> list[SymlinkOperation]:
 # ============================================================
 
 def apply_install_operation(config: Config, operation: SymlinkOperation) -> SymlinkResult:
-    """
-    Apply a symlink installation operation.
-
-    Args:
-        config: Configuration object
-        operation: Operation to apply
-
-    Returns:
-        Result with status after execution
-    """
+    """Apply a symlink installation operation."""
     # Validate source file exists
     if not operation.source_path.exists():
         return SymlinkResult(
             operation=operation,
-            status=SymlinkStatus.SKIPPED_SOURCE_NOT_FOUND
+            status=SymlinkStatus.SKIPPED_SOURCE_NOT_FOUND,
         )
 
     # Evaluate existing symlink
@@ -147,7 +123,7 @@ def apply_install_operation(config: Config, operation: SymlinkOperation) -> Syml
     if operation.target_path.exists():
         return SymlinkResult(
             operation=operation,
-            status=SymlinkStatus.SKIPPED_NOT_SYMLINK
+            status=SymlinkStatus.SKIPPED_NOT_SYMLINK,
         )
 
     # Create new symlink
@@ -155,16 +131,7 @@ def apply_install_operation(config: Config, operation: SymlinkOperation) -> Syml
 
 
 def apply_removal_operation(config: Config, operation: SymlinkOperation) -> SymlinkResult | None:
-    """
-    Apply a symlink removal operation for discarded entries.
-
-    Args:
-        config: Configuration object
-        operation: Operation to remove
-
-    Returns:
-        Result with status after execution, or None if target is not a matching symlink
-    """
+    """Apply a symlink removal operation for discarded entries."""
     # Verify target is a symlink
     if not operation.target_path.is_symlink():
         return None
@@ -212,7 +179,7 @@ def evaluate_existing_symlink(config: Config, operation: SymlinkOperation) -> Sy
         if existing_target == operation.source_path.resolve():
             return SymlinkResult(
                 operation=operation,
-                status=SymlinkStatus.ALREADY_EXISTS
+                status=SymlinkStatus.ALREADY_EXISTS,
             )
 
         # Override if symlink points into .home directory
@@ -222,13 +189,13 @@ def evaluate_existing_symlink(config: Config, operation: SymlinkOperation) -> Sy
         # Skip if symlink points outside .home directory
         return SymlinkResult(
             operation=operation,
-            status=SymlinkStatus.ALREADY_EXISTS
+            status=SymlinkStatus.ALREADY_EXISTS,
         )
     except Exception:
         # Skip if symlink cannot be resolved
         return SymlinkResult(
             operation=operation,
-            status=SymlinkStatus.ALREADY_EXISTS
+            status=SymlinkStatus.ALREADY_EXISTS,
         )
 
 
@@ -259,7 +226,5 @@ def print_symlink_result(result: SymlinkResult) -> None:
         print_symlink_status(result.table_name, result.status.value, Color.GRAY, str(result.target_path), monochrome=True)
     elif result.status == SymlinkStatus.SKIPPED_NOT_SYMLINK:
         print_symlink_status(result.table_name, result.status.value, Color.YELLOW, str(result.target_path))
-    elif result.status in (SymlinkStatus.CREATED, SymlinkStatus.CREATED_DRYRUN):
-        print_symlink_status(result.table_name, result.status.value, Color.GREEN, str(result.target_path))
-    elif result.status in (SymlinkStatus.OVERRIDDEN, SymlinkStatus.OVERRIDDEN_DRYRUN):
+    elif result.status in (SymlinkStatus.CREATED, SymlinkStatus.CREATED_DRYRUN, SymlinkStatus.OVERRIDDEN, SymlinkStatus.OVERRIDDEN_DRYRUN):
         print_symlink_status(result.table_name, result.status.value, Color.GREEN, str(result.target_path))
