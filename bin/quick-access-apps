@@ -1,7 +1,18 @@
 #!/opt/homebrew/bin/fish
 
+# ── Docs ─────────────────────────────────────────────────────────
+# Searches for macOS apps via Spotlight and opens a selection in
+# fzf. Results are filtered to limit directory depth and exclude
+# apps nested inside bundles (e.g. Xcode.app/Contents/...).
+
+# ── Config ───────────────────────────────────────────────────────
+set max_depth 5
+
+# ── Implementation ───────────────────────────────────────────────
 cd ~
 set app (mdfind 'kMDItemContentType == "com.apple.application-bundle"' \
+    | grep -E "^(/[^/]+){1,$max_depth}\$" \
+    | grep -v '/[^/]*\.[^/]*/.*\.app$' \
     | fzf --prompt="Launch app: " --no-hscroll --border=bold \
     --bind "enter:accept")
 if test -n "$app"
