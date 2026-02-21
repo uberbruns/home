@@ -2,10 +2,9 @@
 
 # ── Docs ─────────────────────────────────────────────────────────
 
-# Searches for macOS apps via Spotlight and opens a selection in
-# fzf. Results are filtered to limit directory depth and exclude
-# apps nested inside bundles (e.g. Xcode.app/Contents/...).
-# fzf matches against the full path but displays only the app name.
+# Quick-access launcher combining macOS apps and registered actions.
+# Presents a unified fzf index; selecting an item runs its action.
+# Escape exits; returning from a sub-picker loops back to home.
 #
 # Index format: <search key> \t <display> \t <action>
 
@@ -25,6 +24,38 @@ function make_index
     make_app_index
 end
 
+# Builds index rows from registered actions.
+function make_action_index
+    set -l entries \
+        "Show Clipboard History" "clipse" "quick-access-clipboard" "and exit" \
+        "Open Editor" "fresh" "fresh" "exit" \
+        "Calculate" "qalc" "qalc" "exit" \
+        "Browse Files" "yazi" "yazi" "exit" \
+        "Run Swift REPL" "swift" "swift repl" "exit"
+
+    for i in (seq 1 4 (count $entries))
+        set name $entries[$i]
+        set description $entries[(math $i + 1)]
+        set command $entries[(math $i + 2)]
+        set suffix $entries[(math $i + 3)]
+
+        # Skip entries whose command is not installed
+        if not command -q (string split ' ' -- $command)[1]
+            continue
+        end
+
+        # Build action string with optional exit suffix
+        set action $command
+        if test -n "$suffix"
+            set action "$command; $suffix"
+        end
+
+        # Build index row
+        set display (format_row "Action" "32" $name $description)
+        printf '%s\t%s\t%s\n' $name $display $action
+    end
+end
+
 # Builds index rows from macOS apps found via Spotlight.
 function make_app_index
     # Find app paths, filtering by depth and excluding nested bundles
@@ -41,35 +72,6 @@ function make_app_index
         # Build index row
         set display (format_row "App" "34" $app_name $app_dir)
         printf '%s\t%s\t%s\n' $app_path $display "open '$app_path'; exit"
-    end
-end
-
-# Builds index rows from registered actions.
-function make_action_index
-    set -l actions \
-        "Show Clipboard History" "Clipboard history" "quick-access-clipboard" "and exit" \
-        "Open Editor" "Text editor" "fresh" "exit" \
-        "Calculate" "Calculator" "qalc" "exit" \
-        "Browse Files" "File manager" "yazi" "exit"
-
-    for i in (seq 1 4 (count $actions))
-        set cmd $actions[(math $i + 2)]
-        set description $actions[(math $i + 1)]
-        set name $actions[$i]
-        set suffix $actions[(math $i + 3)]
-
-        # Skip tools that are not installed
-        if not command -q $cmd
-            continue
-        end
-
-        # Build index row
-        set display (format_row "Action" "32" $name $description)
-        set action $cmd
-        if test -n "$suffix"
-            set action "$cmd; $suffix"
-        end
-        printf '%s\t%s\t%s\n' $name $display $action
     end
 end
 

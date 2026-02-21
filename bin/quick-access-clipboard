@@ -2,35 +2,34 @@
 
 # ── Docs ─────────────────────────────────────────────────────────
 
-# Displays clipboard history via clipse in fzf. Selecting an entry
-# copies it to the clipboard.
+# Displays clipboard history via clipse in fzf with a preview panel.
+# Selecting an entry copies it to the clipboard and returns 0.
+# Pressing escape returns 1 without copying.
 #
-# Index format: <search key> \t <display> \t <action>
+# Index format: <search key> \t <display> \t <line number> \t <action>
 
 
 # ── Implementation ──────────────────────────────────────────────
 
-set raw_file (mktemp)
-
 # Builds index rows from clipboard history via clipse.
-# Writes raw JSON entries to $raw_file for preview.
+# Writes raw JSON entries to $preview_file for the preview panel.
 function make_index
-    set -l i 0
+    set -l line_number 0
     for raw_entry in (clipse -output-all raw)
-        set i (math $i + 1)
+        set line_number (math $line_number + 1)
 
-        # Flatten to single line for display and search
-        set preview (string sub -s 2 -l (math (string length -- $raw_entry) - 2) -- $raw_entry)
-        set preview (string replace -a '\\n' ' ' -- $preview)
-        set preview (string replace -a '\\t' ' ' -- $preview)
-        set preview (string replace -a '\\"' '"' -- $preview)
+        # Flatten JSON-encoded entry to single line for display
+        set display (string sub -s 2 -l (math (string length -- $raw_entry) - 2) -- $raw_entry)
+        set display (string replace -a '\\n' ' ' -- $display)
+        set display (string replace -a '\\t' ' ' -- $display)
+        set display (string replace -a '\\"' '"' -- $display)
 
-        # Store raw entry for preview
-        echo $raw_entry >>$raw_file
+        # Store raw entry for preview panel lookup
+        echo $raw_entry >>$preview_file
 
         # Build index row
         set action "printf '%s' '$raw_entry' | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))' | clipse -c"
-        printf '%s\t%s\t%s\t%s\n' $preview $preview $i $action
+        printf '%s\t%s\t%s\t%s\n' $display $display $line_number $action
     end
 end
 
@@ -38,12 +37,18 @@ end
 # ── Main ─────────────────────────────────────────────────────────
 
 cd ~
-set preview_cmd "sed -n '{3}p' $raw_file | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))'"
+set preview_file (mktemp)
+
+# Preview command: read line N from preview_file and decode JSON to plain text
+set preview_cmd "sed -n '{3}p' $preview_file | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))'"
+
 set selection (make_index | fzf --ansi --prompt="❯ " --no-hscroll --border=bold \
     --delimiter='\t' --nth=1 --with-nth=2 -i \
     --preview "$preview_cmd" --preview-window=right:50%:wrap \
     --bind "enter:accept")
-rm -f $raw_file
+
+rm -f $preview_file
+
 if test -n "$selection"
     eval (string split \t -- $selection)[4]
     return 0
