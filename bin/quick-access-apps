@@ -12,7 +12,7 @@
 
 # ── Config ───────────────────────────────────────────────────────
 
-set line_width 88
+set line_width 84
 set max_path_depth 5
 set max_details_width 40
 
@@ -39,8 +39,47 @@ function make_app_index
     end
 end
 
+function make_clipboard_index
+    for raw_entry in (clipse -output-all raw)
+        # Flatten to single line for display and search
+        set preview (string sub -s 2 -l (math (string length -- $raw_entry) - 2) -- $raw_entry)
+        set preview (string replace -a '\\n' ' ' -- $preview)
+        set preview (string replace -a '\\t' ' ' -- $preview)
+        set preview (string replace -a '\\"' '"' -- $preview)
+
+        # Build index row
+        set action "printf '%s' '$raw_entry' | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))' | clipse -c"
+        set display (format_row "Clip" "33" $preview "")
+        printf '%s\t%s\t%s\n' $preview $display $action
+    end
+end
+
+function make_cli_index
+    set -l tools \
+        "fresh" "Text editor" "fresh" \
+        "qalc" "Calculator" "qalc" \
+        "yazi" "File manager" "yazi"
+
+    for i in (seq 1 3 (count $tools))
+        set name $tools[$i]
+        set description $tools[(math $i + 1)]
+        set command $tools[(math $i + 2)]
+
+        # Skip tools that are not installed
+        if not command -q $name
+            continue
+        end
+
+        # Build index row
+        set display (format_row "CLI" "32" $name $description)
+        printf '%s\t%s\t%s\n' $name $display $command
+    end
+end
+
 function make_index
     make_app_index
+    make_cli_index
+    make_clipboard_index
 end
 
 
@@ -74,7 +113,7 @@ end
 
 cd ~
 set selection (make_index | fzf --ansi --prompt="❯ " --no-hscroll --border=bold \
-    --delimiter='\t' --nth=1 --with-nth=2 \
+    --delimiter='\t' --nth=1 --with-nth=2 -i \
     --bind "enter:accept")
 if test -n "$selection"
     set action (string split \t -- $selection)[3]
