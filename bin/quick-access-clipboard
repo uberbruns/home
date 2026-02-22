@@ -6,6 +6,7 @@ Escape exits 1 without copying.
 """
 
 import json
+import linecache
 import os
 import subprocess
 import sys
@@ -54,12 +55,17 @@ def build_index(preview_path):
     return "\n".join(lines)
 
 
+def decode_preview(preview_path, line_number):
+    """Decode a JSON entry from the preview file and print it."""
+    line = linecache.getline(preview_path, int(line_number))
+    if line:
+        sys.stdout.write(json.loads(line.strip()))
+
+
 def pick_entry(index, preview_path):
     """Run fzf with preview and return selected line number, or None."""
-    preview_cmd = (
-        f"sed -n '{{3}}p' {preview_path}"
-        " | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))'"
-    )
+    script = os.path.abspath(sys.argv[0])
+    preview_cmd = f"{script} --preview {preview_path} {{3}}"
     fzf_args = FZF_ARGS + [
         "--preview", preview_cmd,
         "--preview-window=right:50%:wrap",
@@ -85,6 +91,11 @@ def copy_entry(preview_path, line_number):
 # --------------------------------------------------------------------------- #
 
 def main():
+    # Handle --preview callback from fzf
+    if len(sys.argv) == 4 and sys.argv[1] == "--preview":
+        decode_preview(sys.argv[2], sys.argv[3])
+        return
+
     preview_file = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
     preview_path = preview_file.name
     preview_file.close()

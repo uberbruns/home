@@ -17,7 +17,36 @@ from safari_bookmarks import (
 )
 
 
+# --------------------------------------------------------------------------- #
+# Main
+# --------------------------------------------------------------------------- #
+
 def main():
+    """Parse arguments, extract bookmarks, and print results."""
+    args = parse_args()
+
+    # Extract and filter
+    bookmarks = filter_bookmarks(
+        extract_bookmarks(load_plist()),
+        excludes=args.exclude or None,
+        includes=args.include or None,
+        root=args.root,
+    )
+
+    # Print
+    if args.raw:
+        print_raw(bookmarks, args.delimiter)
+    else:
+        print_formatted(bookmarks, args.delimiter,
+                        shutil.get_terminal_size().columns,
+                        args.truncate, args.truncate_url)
+
+
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
+
+def parse_args():
     parser = argparse.ArgumentParser(description="Extract Safari bookmarks")
     parser.add_argument("-1", "--raw", dest="raw", action="store_true",
                         help="machine-readable output: tab-separated, no truncation (default: off)")
@@ -33,23 +62,7 @@ def main():
                         help="truncate path to N characters, 0 = auto (default: 0)")
     parser.add_argument("-u", "--truncate-url", type=int, default=0,
                         help="truncate url to N characters, 0 = auto (default: 0)")
-    args = parser.parse_args()
-
-    # Extract and filter
-    bookmarks = filter_bookmarks(
-        extract_bookmarks(load_plist()),
-        root=args.root,
-        includes=args.include or None,
-        excludes=args.exclude or None,
-    )
-
-    # Print
-    if args.raw:
-        print_raw(bookmarks, args.delimiter)
-    else:
-        print_formatted(bookmarks, args.delimiter,
-                        shutil.get_terminal_size().columns,
-                        args.truncate, args.truncate_url)
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
