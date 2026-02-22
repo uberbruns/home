@@ -51,7 +51,7 @@ tiling.setSplitKey("space")
 
 --Quick Access Terminal
 hs.hotkey.bind({"cmd", "shift"}, "space", function()
-  hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal", "quick-access-home"}):start()
+  hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal"}):start()
 end)
 
 -- hs.hotkey.bind({"cmd", "shift"}, "space", function()

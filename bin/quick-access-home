@@ -1,120 +1,133 @@
-#!/opt/homebrew/bin/fish
+#!/usr/bin/env python3
+"""Quick-access launcher combining macOS apps and registered actions.
 
-# ── Docs ─────────────────────────────────────────────────────────
+Presents a unified fzf index; selecting an item runs its action.
+Escape exits; returning from a sub-picker loops back to home.
+"""
 
-# Quick-access launcher combining macOS apps and registered actions.
-# Presents a unified fzf index; selecting an item runs its action.
-# Escape exits; returning from a sub-picker loops back to home.
-#
-# Index format: <search key> \t <display> \t <action>
-
-
-# ── Config ───────────────────────────────────────────────────────
-
-set line_width 84
-set max_details_width 40
-set max_path_depth 5
+import os
+import re
+import shutil
+import subprocess
+import unicodedata
 
 
-# ── Implementation ──────────────────────────────────────────────
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
 
-# Aggregates all index sources into a unified list.
-function make_index
-    make_action_index
-    make_app_index
-end
+LINE_WIDTH = 84
+MAX_DETAILS_WIDTH = 40
+MAX_PATH_DEPTH = 5
 
-# Builds index rows from registered actions.
-function make_action_index
-    set -l entries \
-        "Calculator" "calculator" "Math expressions via qalc" "qalc" "exit" \
-        "Clipboard History" "clipboard" "Paste from history via clipse" "quick-access-clipboard" "and exit" \
-        "Editor" "editor" "Terminal editor via fresh" "fresh" "exit" \
-        "Emoji Picker" "emoji" "Search and copy emoji to clipboard" "quick-access-emojis" "and exit" \
-        "Bookmarks" "bookmarks" "Open Safari bookmark in browser" "quick-access-bookmarks" "and exit" \
-        "File Browser" "files" "Navigate filesystem via yazi" "yazi" "exit" \
-        "Swift REPL" "repl" "Interactive Swift playground" "swift repl" "exit"
+FZF_ARGS = [
+    "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll", "--border=bold",
+    "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
+    "--bind", "enter:accept",
+]
 
-    for i in (seq 1 5 (count $entries))
-        set name $entries[$i]
-        set noun $entries[(math $i + 1)]
-        set description $entries[(math $i + 2)]
-        set command $entries[(math $i + 3)]
-        set suffix $entries[(math $i + 4)]
+ACTIONS = [
+    # (name, noun, description, command)
+    ("Bookmarks", "bookmarks", "Open Safari bookmark in browser", "quick-access-bookmarks"),
+    ("Calculator", "calculator", "Math expressions via qalc", "qalc"),
+    ("Clipboard History", "clipboard", "Paste from history via clipse", "quick-access-clipboard"),
+    ("Editor", "editor", "Terminal editor via fresh", "fresh"),
+    ("Emoji Picker", "emoji", "Search and copy emoji to clipboard", "quick-access-emojis"),
+    ("File Browser", "files", "Navigate filesystem via yazi", "yazi"),
+    ("Swift REPL", "repl", "Interactive Swift playground", "swift repl"),
+]
 
-        # Skip entries whose command is not installed
-        if not command -q (string split ' ' -- $command)[1]
+
+# --------------------------------------------------------------------------- #
+# Implementation
+# --------------------------------------------------------------------------- #
+
+def build_action_index():
+    """Build index rows from registered actions."""
+    lines = []
+    for name, noun, description, command in ACTIONS:
+        cmd_name = command.split()[0]
+        if not shutil.which(cmd_name):
             continue
-        end
 
-        # Build action string with optional exit suffix
-        set action $command
-        if test -n "$suffix"
-            set action "$command; $suffix"
-        end
-
-        # Build index row
-        set display (format_row "Action" "32" $name $description)
-        printf '%s\t%s\t%s\n' "$name $noun $description" $display $action
-    end
-end
-
-# Builds index rows from macOS apps found via Spotlight.
-function make_app_index
-    # Find app paths, filtering by depth and excluding nested bundles
-    set app_paths (mdfind 'kMDItemContentType == "com.apple.application-bundle"' \
-        | grep -E "^(/[^/]+){1,$max_path_depth}\$" \
-        | grep -v '/[^/]*\.[^/]*/.*\.app$' \
-        | sort)
-
-    for app_path in $app_paths
-        # Extract components
-        set app_dir (string replace -r '/[^/]+$' '' -- $app_path)
-        set app_name (string replace -r '.*/(.+)\.app$' '$1' -- $app_path)
-
-        # Build index row
-        set display (format_row "App" "34" $app_name $app_dir)
-        printf '%s\t%s\t%s\n' $app_path $display "open '$app_path'; exit"
-    end
-end
+        display = format_row("Action", "32", name, description)
+        search_key = f"{name} {noun} {description}"
+        lines.append(f"{search_key}\t{display}\t{command}")
+    return lines
 
 
-# ── Supporting Code ─────────────────────────────────────────────
+def build_app_index():
+    """Build index rows from macOS apps found via Spotlight."""
+    result = subprocess.run(
+        ["mdfind", 'kMDItemContentType == "com.apple.application-bundle"'],
+        text=True, capture_output=True,
+    )
+    depth_pattern = re.compile(r"^(/[^/]+){1," + str(MAX_PATH_DEPTH) + r"}$")
+    nested_pattern = re.compile(r"/[^/]*\.[^/]*/.*\.app$")
 
-# Formats a row with colored type tag, title, and right-aligned details.
-function format_row --argument-names type_label type_color title details
-    # Truncate details
-    if test (string length -- $details) -gt $max_details_width
-        set details (string sub -l (math $max_details_width - 2) -- $details)..
-    end
+    lines = []
+    for app_path in sorted(result.stdout.splitlines()):
+        if not depth_pattern.match(app_path):
+            continue
+        if nested_pattern.search(app_path):
+            continue
 
-    # Build colored type tag
-    set tag (printf '\e[%sm[%s]\e[0m' $type_color $type_label)
-    set tag_len (math 2 + (string length -- $type_label))
+        app_dir = app_path.rsplit("/", 1)[0]
+        app_name = app_path.rsplit("/", 1)[1].removesuffix(".app")
 
-    # Calculate padding between title and details
-    set details_len (string length -- $details)
-    set title_len (string length -- $title)
-    set padding_len (math "$line_width - $tag_len - 1 - $title_len - $details_len")
-    if test $padding_len -lt 1
-        set padding_len 1
-    end
-    set padding (string repeat -n $padding_len ' ')
-
-    # Compose row
-    printf '%s %s%s\e[90m%s\e[0m' $tag $title $padding $details
-end
+        display = format_row("App", "34", app_name, app_dir)
+        lines.append(f"{app_path}\t{display}\topen '{app_path}'")
+    return lines
 
 
-# ── Main ─────────────────────────────────────────────────────────
+def build_index():
+    """Aggregate all index sources."""
+    return "\n".join(build_action_index() + build_app_index())
 
-cd ~
-while true
-    set selection (make_index | fzf --ansi --prompt="❯ " --no-hscroll --border=bold \
-        --delimiter='\t' --nth=1 --with-nth=2 -i \
-        --bind "enter:accept")
-    if test -z "$selection"
-        exit
-    end
-    eval (string split \t -- $selection)[3]
-end
+
+# --------------------------------------------------------------------------- #
+# Formatting
+# --------------------------------------------------------------------------- #
+
+def display_width(text):
+    """Return terminal column count, treating wide characters as 2 columns."""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
+
+
+def format_row(type_label, type_color, title, details):
+    """Format a row with colored type tag, title, and right-aligned details."""
+    if len(details) > MAX_DETAILS_WIDTH:
+        details = details[:MAX_DETAILS_WIDTH - 2] + ".."
+
+    tag = f"\033[{type_color}m[{type_label}]\033[0m"
+    tag_len = 2 + len(type_label)
+
+    padding_len = LINE_WIDTH - tag_len - 1 - display_width(title) - len(details)
+    if padding_len < 1:
+        padding_len = 1
+    padding = " " * padding_len
+
+    return f"{tag} {title}{padding}\033[90m{details}\033[0m"
+
+
+# --------------------------------------------------------------------------- #
+# Main
+# --------------------------------------------------------------------------- #
+
+def main():
+    os.chdir(os.path.expanduser("~"))
+
+    while True:
+        index = build_index()
+        result = subprocess.run(FZF_ARGS, input=index, text=True, capture_output=True)
+        if result.returncode != 0 or not result.stdout.strip():
+            break
+
+        action = result.stdout.strip().split("\t")[2]
+        r = subprocess.run(["/bin/sh", "-c", action])
+        if r.returncode == 0:
+            break
+
+
+if __name__ == "__main__":
+    main()

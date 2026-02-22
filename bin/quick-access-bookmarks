@@ -33,14 +33,6 @@ FZF_ARGS = [
 # Implementation
 # --------------------------------------------------------------------------- #
 
-def load_bookmarks():
-    """Load and filter Safari bookmarks, excluding Reading List."""
-    return list(filter_bookmarks(
-        extract_bookmarks(load_plist()),
-        excludes=["com.apple.ReadingList/*"],
-    ))
-
-
 def build_index(bookmarks):
     """Build fzf input: search_key \\t display \\t url per line."""
     lines = []
@@ -89,7 +81,10 @@ def truncate_wide(text, max_width):
 # --------------------------------------------------------------------------- #
 
 def main():
-    bookmarks = load_bookmarks()
+    bookmarks = list(filter_bookmarks(
+        extract_bookmarks(load_plist()),
+        excludes=["com.apple.ReadingList/*"],
+    ))
     if not bookmarks:
         sys.exit(1)
 

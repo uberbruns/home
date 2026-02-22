@@ -1,56 +1,105 @@
-#!/opt/homebrew/bin/fish
+#!/usr/bin/env python3
+"""Clipboard history picker using fzf with preview panel.
 
-# ── Docs ─────────────────────────────────────────────────────────
+Selecting an entry copies it to the clipboard and exits 0.
+Escape exits 1 without copying.
+"""
 
-# Displays clipboard history via clipse in fzf with a preview panel.
-# Selecting an entry copies it to the clipboard and returns 0.
-# Pressing escape returns 1 without copying.
-#
-# Index format: <search key> \t <display> \t <line number> \t <action>
-
-
-# ── Implementation ──────────────────────────────────────────────
-
-# Builds index rows from clipboard history via clipse.
-# Writes raw JSON entries to $preview_file for the preview panel.
-function make_index
-    set -l line_number 0
-    for raw_entry in (clipse -output-all raw)
-        set line_number (math $line_number + 1)
-
-        # Flatten JSON-encoded entry to single line for display
-        set display (string sub -s 2 -l (math (string length -- $raw_entry) - 2) -- $raw_entry)
-        set display (string replace -a '\\n' ' ' -- $display)
-        set display (string replace -a '\\t' ' ' -- $display)
-        set display (string replace -a '\\"' '"' -- $display)
-
-        # Store raw entry for preview panel lookup
-        echo $raw_entry >>$preview_file
-
-        # Build index row
-        set action "printf '%s' '$raw_entry' | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))' | clipse -c"
-        printf '%s\t%s\t%s\t%s\n' $display $display $line_number $action
-    end
-end
+import json
+import os
+import subprocess
+import sys
+import tempfile
 
 
-# ── Main ─────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
 
-cd ~
-set preview_file (mktemp)
+FZF_ARGS = [
+    "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll", "--border=bold",
+    "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
+    "--bind", "enter:accept",
+]
 
-# Preview command: read line N from preview_file and decode JSON to plain text
-set preview_cmd "sed -n '{3}p' $preview_file | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))'"
 
-set selection (make_index | fzf --ansi --prompt="❯ " --no-hscroll --border=bold \
-    --delimiter='\t' --nth=1 --with-nth=2 -i \
-    --preview "$preview_cmd" --preview-window=right:50%:wrap \
-    --bind "enter:accept")
+# --------------------------------------------------------------------------- #
+# Implementation
+# --------------------------------------------------------------------------- #
 
-rm -f $preview_file
+def build_index(preview_path):
+    """Build fzf input and write raw entries to preview file.
 
-if test -n "$selection"
-    eval (string split \t -- $selection)[4]
-    return 0
-end
-return 1
+    Index format: search_key \\t display \\t line_number \\t action
+    """
+    result = subprocess.run(
+        ["clipse", "-output-all", "raw"],
+        text=True, capture_output=True,
+    )
+    lines = []
+    with open(preview_path, "w") as pf:
+        for line_number, raw_entry in enumerate(result.stdout.splitlines(), 1):
+            if not raw_entry:
+                continue
+            # Flatten JSON-encoded entry to single line for display
+            display = raw_entry
+            if display.startswith('"') and display.endswith('"'):
+                display = display[1:-1]
+            display = display.replace("\\n", " ").replace("\\t", " ").replace('\\"', '"')
+
+            pf.write(raw_entry + "\n")
+            lines.append(f"{display}\t{display}\t{line_number}")
+    return "\n".join(lines)
+
+
+def pick_entry(index, preview_path):
+    """Run fzf with preview and return selected line number, or None."""
+    preview_cmd = (
+        f"sed -n '{{3}}p' {preview_path}"
+        " | python3 -c 'import sys,json; sys.stdout.write(json.loads(sys.stdin.read()))'"
+    )
+    fzf_args = FZF_ARGS + [
+        "--preview", preview_cmd,
+        "--preview-window=right:50%:wrap",
+    ]
+    result = subprocess.run(fzf_args, input=index, text=True, capture_output=True)
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    return result.stdout.strip().split("\t")[2]
+
+
+def copy_entry(preview_path, line_number):
+    """Decode the raw JSON entry and pipe it to clipse."""
+    with open(preview_path) as f:
+        for i, line in enumerate(f, 1):
+            if i == int(line_number):
+                decoded = json.loads(line.strip())
+                subprocess.run(["clipse", "-c"], input=decoded, text=True)
+                return
+
+
+# --------------------------------------------------------------------------- #
+# Main
+# --------------------------------------------------------------------------- #
+
+def main():
+    preview_file = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+    preview_path = preview_file.name
+    preview_file.close()
+
+    try:
+        index = build_index(preview_path)
+        if not index:
+            sys.exit(1)
+
+        line_number = pick_entry(index, preview_path)
+        if not line_number:
+            sys.exit(1)
+
+        copy_entry(preview_path, line_number)
+    finally:
+        os.unlink(preview_path)
+
+
+if __name__ == "__main__":
+    main()

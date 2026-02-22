@@ -1,24 +1,27 @@
-#!/opt/homebrew/bin/fish
+#!/usr/bin/env python3
+"""Emoji picker using fzf.
 
-# ── Docs ─────────────────────────────────────────────────────────
+Selecting an emoji copies it to the clipboard and exits 0.
+Escape exits 1 without copying.
+"""
 
-# Emoji picker using fzf. Selecting an emoji copies it to the
-# clipboard and returns 0. Escape returns 1 without copying.
+import ctypes
+import subprocess
+import sys
+import unicodedata
 
 
-# ── Implementation ──────────────────────────────────────────────
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
 
-# Builds searchable index of imagelike emojis with their names.
-function make_index
-    python3 -c '
-import unicodedata, ctypes
+FZF_ARGS = [
+    "fzf", "--prompt=❯ ", "--no-hscroll", "--border=bold",
+    "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
+    "--bind", "enter:accept",
+]
 
-# Use system wcwidth to check if an emoji renders as full-width (2 cols)
-libc = ctypes.CDLL("libSystem.B.dylib")
-libc.wcwidth.argtypes = [ctypes.c_wchar]
-libc.wcwidth.restype = ctypes.c_int
-
-ranges = [
+EMOJI_RANGES = [
     (0x1F600, 0x1F64F),  # Emoticons
     (0x1F300, 0x1F5FF),  # Misc Symbols and Pictographs
     (0x1F680, 0x1F6FF),  # Transport and Map
@@ -27,39 +30,63 @@ ranges = [
     (0x1F1E0, 0x1F1FF),  # Flags
 ]
 
-skip = set(range(0x1F3FB, 0x1F400))  # Skin tone modifiers
-
-seen = set()
-for start, end in ranges:
-    for cp in range(start, end + 1):
-        char = chr(cp)
-        try:
-            name = unicodedata.name(char)
-        except ValueError:
-            continue
-        if char in seen or cp in skip:
-            continue
-        if libc.wcwidth(char) != 2:
-            continue
-        seen.add(char)
-        search_name = name.lower()
-        display = f"{char}  {name.title()}"
-        print(f"{search_name}\t{display}\t{char}")
-'
-end
+SKIP = set(range(0x1F3FB, 0x1F400))  # Skin tone modifiers
 
 
-# ── Main ─────────────────────────────────────────────────────────
+# --------------------------------------------------------------------------- #
+# Implementation
+# --------------------------------------------------------------------------- #
 
-cd ~
-set selection (make_index | fzf --prompt="❯ " --no-hscroll --border=bold \
-    --delimiter='\t' --nth=1 --with-nth=2 -i \
-    --bind "enter:accept")
+_libc = ctypes.CDLL("libSystem.B.dylib")
+_libc.wcwidth.argtypes = [ctypes.c_wchar]
+_libc.wcwidth.restype = ctypes.c_int
 
-if test -n "$selection"
-    set emoji (string split \t -- $selection)[3]
-    printf '%s' $emoji | pbcopy
-    echo "Copied $emoji"
-    return 0
-end
-return 1
+
+def build_index():
+    """Build fzf input: search_name \\t display \\t emoji per line."""
+    lines = []
+    seen = set()
+    for start, end in EMOJI_RANGES:
+        for cp in range(start, end + 1):
+            if cp in SKIP:
+                continue
+            char = chr(cp)
+            if char in seen:
+                continue
+            try:
+                name = unicodedata.name(char)
+            except ValueError:
+                continue
+            if _libc.wcwidth(char) != 2:
+                continue
+            seen.add(char)
+            search_name = name.lower()
+            display = f"{char}  {name.title()}"
+            lines.append(f"{search_name}\t{display}\t{char}")
+    return "\n".join(lines)
+
+
+def pick_emoji(index):
+    """Run fzf and return the selected emoji, or None on cancel."""
+    result = subprocess.run(FZF_ARGS, input=index, text=True, capture_output=True)
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    return result.stdout.strip().split("\t")[2]
+
+
+# --------------------------------------------------------------------------- #
+# Main
+# --------------------------------------------------------------------------- #
+
+def main():
+    index = build_index()
+    emoji = pick_emoji(index)
+    if not emoji:
+        sys.exit(1)
+
+    subprocess.run(["pbcopy"], input=emoji, text=True)
+    print(f"Copied {emoji}")
+
+
+if __name__ == "__main__":
+    main()
