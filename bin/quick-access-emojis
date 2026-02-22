@@ -5,64 +5,62 @@ Selecting an emoji copies it to the clipboard and exits 0.
 Escape exits 1 without copying.
 """
 
-import ctypes
+import json
+import os
 import subprocess
 import sys
-import unicodedata
 
 
 # --------------------------------------------------------------------------- #
 # Configuration
 # --------------------------------------------------------------------------- #
 
+EMOJI_DATA = os.path.join(
+    os.path.dirname(__file__),
+    "../externals/milesj/emojibase/packages/data/en/compact.raw.json",
+)
+
+LINE_WIDTH = 84
+
 FZF_ARGS = [
-    "fzf", "--prompt=❯ ", "--no-hscroll", "--border=bold",
+    "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll", "--border=bold",
     "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
     "--bind", "enter:accept",
 ]
-
-EMOJI_RANGES = [
-    (0x1F600, 0x1F64F),  # Emoticons
-    (0x1F300, 0x1F5FF),  # Misc Symbols and Pictographs
-    (0x1F680, 0x1F6FF),  # Transport and Map
-    (0x1F900, 0x1F9FF),  # Supplemental Symbols and Pictographs
-    (0x1FA70, 0x1FAFF),  # Symbols and Pictographs Extended-A
-    (0x1F1E0, 0x1F1FF),  # Flags
-]
-
-SKIP = set(range(0x1F3FB, 0x1F400))  # Skin tone modifiers
 
 
 # --------------------------------------------------------------------------- #
 # Implementation
 # --------------------------------------------------------------------------- #
 
-_libc = ctypes.CDLL("libSystem.B.dylib")
-_libc.wcwidth.argtypes = [ctypes.c_wchar]
-_libc.wcwidth.restype = ctypes.c_int
-
-
 def build_index():
-    """Build fzf input: search_name \\t display \\t emoji per line."""
+    """Build fzf input from emojibase data.
+
+    Only includes entries with tags. Tags are searchable but not displayed.
+    Index format: search_terms \\t display \\t emoji
+    """
+    with open(EMOJI_DATA) as f:
+        entries = json.load(f)
+
     lines = []
-    seen = set()
-    for start, end in EMOJI_RANGES:
-        for cp in range(start, end + 1):
-            if cp in SKIP:
-                continue
-            char = chr(cp)
-            if char in seen:
-                continue
-            try:
-                name = unicodedata.name(char)
-            except ValueError:
-                continue
-            if _libc.wcwidth(char) != 2:
-                continue
-            seen.add(char)
-            search_name = name.lower()
-            display = f"{char}  {name.title()}"
-            lines.append(f"{search_name}\t{display}\t{char}")
+    for entry in entries:
+        tags = entry.get("tags")
+        if not tags:
+            continue
+
+        emoji = entry["unicode"]
+        label = entry["label"]
+
+        # Search terms: label + all tags (searchable via --nth=1)
+        search_terms = f"{label} {' '.join(tags)}"
+
+        # Display: emoji + label, tags right-aligned in gray
+        title = f"{emoji}  {label.title()}"
+        tag_text = ", ".join(tags)
+        padding = " " * max(4, LINE_WIDTH - len(title) - len(tag_text))
+        display = f"{title}{padding}\033[90m{tag_text}\033[0m"
+
+        lines.append(f"{search_terms}\t{display}\t{emoji}")
     return "\n".join(lines)
 
 
