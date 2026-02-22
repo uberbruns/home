@@ -53,7 +53,7 @@ function make_action_index
         end
 
         # Build index row
-        set display (format_row "Action" "32" $name $noun)
+        set display (format_row "Action" "32" $name $description)
         printf '%s\t%s\t%s\n' "$name $noun $description" $display $action
     end
 end
