@@ -10,6 +10,9 @@ import subprocess
 import sys
 import unicodedata
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
+from safari_bookmarks import extract_bookmarks, filter_bookmarks, load_plist
+
 
 # --------------------------------------------------------------------------- #
 # Configuration
@@ -17,8 +20,7 @@ import unicodedata
 
 LINE_WIDTH = 84
 MAX_FOLDER_WIDTH = 40
-
-BOOKMARK_SCRIPT = os.path.join(os.path.dirname(__file__), "list-safari-bookmarks")
+FOLDER_DELIMITER = " > "
 
 FZF_ARGS = [
     "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll", "--border=bold",
@@ -32,24 +34,22 @@ FZF_ARGS = [
 # --------------------------------------------------------------------------- #
 
 def load_bookmarks():
-    """Load bookmarks as (folder, title, url) tuples via list-safari-bookmarks."""
-    result = subprocess.run(
-        [sys.executable, BOOKMARK_SCRIPT,
-         "-e", "com.apple.ReadingList/*", "-1", "-d", " > "],
-        capture_output=True, text=True,
-    )
-    return [
-        tuple(parts) for line in result.stdout.splitlines()
-        if len(parts := line.split("\t", 2)) == 3
-    ]
+    """Load and filter Safari bookmarks, excluding Reading List."""
+    return list(filter_bookmarks(
+        extract_bookmarks(load_plist()),
+        excludes=["com.apple.ReadingList/*"],
+    ))
 
 
 def build_index(bookmarks):
     """Build fzf input: search_key \\t display \\t url per line."""
     lines = []
     for folder, title, url in bookmarks:
+        # Format folder with output delimiter
+        display_folder = folder.replace("/", FOLDER_DELIMITER) if folder else ""
+        display_folder = truncate_wide(display_folder, MAX_FOLDER_WIDTH)
+
         # Format display: title left-aligned, folder right-aligned in dim
-        display_folder = truncate(folder, MAX_FOLDER_WIDTH)
         padding = " " * max(1, LINE_WIDTH - display_width(title) - display_width(display_folder))
         display = f"{title}{padding}\033[90m{display_folder}\033[0m"
 
@@ -75,7 +75,7 @@ def display_width(text):
     return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
 
 
-def truncate(text, max_width):
+def truncate_wide(text, max_width):
     """Shorten text to max_width display columns with trailing ellipsis."""
     if display_width(text) <= max_width:
         return text
