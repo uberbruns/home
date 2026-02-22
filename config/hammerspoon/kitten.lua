@@ -13,14 +13,15 @@
 local APP_NAME = "kitty-quick-access"
 local BORDER_COLOR = { hex = "#a277ff" }
 local BORDER_WIDTH = 2
-local FADE_IN = 0.1
-local FADE_OUT = 0.15
+local FADE_IN = 0.3
+local FADE_OUT = 0.3
 local OVERLAY_COLOR = { black = true, alpha = 0.8 }
 
 --------------------------------------------------
 -- State
 --------------------------------------------------
 
+local backdropVisible = false
 local borderCanvas = nil
 local overlayCanvas = nil
 
@@ -76,7 +77,8 @@ end
 --------------------------------------------------
 
 local function showBackdrop()
-  if overlayCanvas then return end
+  if backdropVisible then return end
+  backdropVisible = true
 
   -- Overlay
   overlayCanvas = createOverlayCanvas()
@@ -90,6 +92,9 @@ local function showBackdrop()
 end
 
 local function hideBackdrop()
+  if not backdropVisible then return end
+  backdropVisible = false
+
   if borderCanvas then
     deleteCanvas(borderCanvas)
     borderCanvas = nil
@@ -105,12 +110,15 @@ end
 --------------------------------------------------
 
 kittenWatcher = hs.application.watcher.new(function(appName, eventType)
-  if appName ~= APP_NAME then return end
-
   if eventType == hs.application.watcher.activated then
-    showBackdrop()
-  elseif eventType == hs.application.watcher.deactivated
-      or eventType == hs.application.watcher.terminated then
+    if appName == APP_NAME then
+      showBackdrop()
+    elseif backdropVisible then
+      hideBackdrop()
+    end
+  elseif appName == APP_NAME
+      and (eventType == hs.application.watcher.deactivated
+        or eventType == hs.application.watcher.terminated) then
     hideBackdrop()
   end
 end)
