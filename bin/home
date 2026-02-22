@@ -5,10 +5,12 @@ Manages dotfiles with declarative symlinks and label-based filtering.
 """
 
 import argparse
+import os
 import subprocess
 import sys
 
-from homelib import (
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
+from home import (
     Config,
     execute_discard,
     execute_install,
@@ -16,7 +18,7 @@ from homelib import (
     execute_push,
     execute_update,
 )
-from homelib.output import print_error, print_info
+from home.output import print_error, print_info
 
 
 def main() -> None:

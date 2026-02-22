@@ -25,7 +25,7 @@ class Config:
 
     def __init__(self):
         # Resolve repository root directory
-        self.repo_root = Path(__file__).parent.parent.parent.resolve()
+        self.repo_root = Path(__file__).parent.parent.parent.parent.resolve()
 
         # Validate repository is a git directory
         if not (self.repo_root / ".git").exists():
