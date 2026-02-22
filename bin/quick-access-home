@@ -31,6 +31,7 @@ function make_action_index
         "Clipboard History" "clipboard" "Paste from history via clipse" "quick-access-clipboard" "and exit" \
         "Editor" "editor" "Terminal editor via fresh" "fresh" "exit" \
         "Emoji Picker" "emoji" "Search and copy emoji to clipboard" "quick-access-emojis" "and exit" \
+        "Bookmarks" "bookmarks" "Open Safari bookmark in browser" "quick-access-bookmarks" "and exit" \
         "File Browser" "files" "Navigate filesystem via yazi" "yazi" "exit" \
         "Swift REPL" "repl" "Interactive Swift playground" "swift repl" "exit"
 
