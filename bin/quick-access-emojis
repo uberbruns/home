@@ -23,9 +23,9 @@ EMOJI_DATA = os.path.join(
 LINE_WIDTH = 84
 
 FZF_ARGS = [
-    "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll", "--border=bold",
+    "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll",
     "--color=16",
-    "--color=border:2,prompt:2,bg+:0,fg+:15",
+    "--color=prompt:2,bg+:0,fg+:15:regular,hl:regular,hl+:regular",
     "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
     "--bind", "enter:accept",
 ]

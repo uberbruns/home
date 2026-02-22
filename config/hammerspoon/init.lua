@@ -20,6 +20,7 @@ local tiling = require("tiling")
 
 require("bookmarks")
 require("hyperkey")
+require("kitten")
 
 -- Tiling
 tiling.registerApp("ad", "com.seriflabs.affinitydesigner2")
