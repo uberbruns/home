@@ -8,6 +8,7 @@ tmux = "3.6a"
 node = "lts"
 yazi = "latest"
 yq = "latest"
+"github:da-luce/astroterm" = "latest"
 "go:github.com/savedra1/clipse" = "latest"
 "npm:figlet" = "latest"
 

@@ -30,6 +30,7 @@ FZF_ARGS = [
 
 ACTIONS = [
     # (name, noun, description, command)
+    ("Astroterm", "sky stars", "Night sky over Hamburg", "astroterm -cuq --city=Hamburg"),
     ("Bookmarks", "bookmarks", "Open Safari bookmark in browser", "quick-access-bookmarks"),
     ("Calculator", "calculator", "Math expressions via qalc", "qalc"),
     ("Clipboard History", "clipboard", "Paste from history via clipse", "quick-access-clipboard"),
