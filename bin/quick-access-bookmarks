@@ -24,6 +24,8 @@ FOLDER_DELIMITER = " > "
 
 FZF_ARGS = [
     "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll", "--border=bold",
+    "--color=16",
+    "--color=border:2,prompt:2,bg+:0,fg+:15",
     "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
     "--bind", "enter:accept",
 ]

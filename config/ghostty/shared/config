@@ -8,7 +8,7 @@ font-family = Source Code Pro for Powerline
 font-size = 15
 adjust-cell-height = 10%
 
-theme = Aura
+config-file = themes/Aura
 window-padding-x = 12
 window-padding-y = 12
 cursor-style = block
