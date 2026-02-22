@@ -27,17 +27,19 @@ end
 # Builds index rows from registered actions.
 function make_action_index
     set -l entries \
-        "Show Clipboard History" "clipse" "quick-access-clipboard" "and exit" \
-        "Open Editor" "fresh" "fresh" "exit" \
-        "Calculate" "qalc" "qalc" "exit" \
-        "Browse Files" "yazi" "yazi" "exit" \
-        "Run Swift REPL" "swift" "swift repl" "exit"
+        "Calculator" "calculator" "Math expressions via qalc" "qalc" "exit" \
+        "Clipboard History" "clipboard" "Paste from history via clipse" "quick-access-clipboard" "and exit" \
+        "Editor" "editor" "Terminal editor via fresh" "fresh" "exit" \
+        "Emoji Picker" "emoji" "Search and copy emoji to clipboard" "quick-access-emojis" "and exit" \
+        "File Browser" "files" "Navigate filesystem via yazi" "yazi" "exit" \
+        "Swift REPL" "repl" "Interactive Swift playground" "swift repl" "exit"
 
-    for i in (seq 1 4 (count $entries))
+    for i in (seq 1 5 (count $entries))
         set name $entries[$i]
-        set description $entries[(math $i + 1)]
-        set command $entries[(math $i + 2)]
-        set suffix $entries[(math $i + 3)]
+        set noun $entries[(math $i + 1)]
+        set description $entries[(math $i + 2)]
+        set command $entries[(math $i + 3)]
+        set suffix $entries[(math $i + 4)]
 
         # Skip entries whose command is not installed
         if not command -q (string split ' ' -- $command)[1]
@@ -51,8 +53,8 @@ function make_action_index
         end
 
         # Build index row
-        set display (format_row "Action" "32" $name $description)
-        printf '%s\t%s\t%s\n' $name $display $action
+        set display (format_row "Action" "32" $name $noun)
+        printf '%s\t%s\t%s\n' "$name $noun $description" $display $action
     end
 end
 

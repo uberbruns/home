@@ -1,0 +1,65 @@
+#!/opt/homebrew/bin/fish
+
+# ── Docs ─────────────────────────────────────────────────────────
+
+# Emoji picker using fzf. Selecting an emoji copies it to the
+# clipboard and returns 0. Escape returns 1 without copying.
+
+
+# ── Implementation ──────────────────────────────────────────────
+
+# Builds searchable index of imagelike emojis with their names.
+function make_index
+    python3 -c '
+import unicodedata, ctypes
+
+# Use system wcwidth to check if an emoji renders as full-width (2 cols)
+libc = ctypes.CDLL("libSystem.B.dylib")
+libc.wcwidth.argtypes = [ctypes.c_wchar]
+libc.wcwidth.restype = ctypes.c_int
+
+ranges = [
+    (0x1F600, 0x1F64F),  # Emoticons
+    (0x1F300, 0x1F5FF),  # Misc Symbols and Pictographs
+    (0x1F680, 0x1F6FF),  # Transport and Map
+    (0x1F900, 0x1F9FF),  # Supplemental Symbols and Pictographs
+    (0x1FA70, 0x1FAFF),  # Symbols and Pictographs Extended-A
+    (0x1F1E0, 0x1F1FF),  # Flags
+]
+
+skip = set(range(0x1F3FB, 0x1F400))  # Skin tone modifiers
+
+seen = set()
+for start, end in ranges:
+    for cp in range(start, end + 1):
+        char = chr(cp)
+        try:
+            name = unicodedata.name(char)
+        except ValueError:
+            continue
+        if char in seen or cp in skip:
+            continue
+        if libc.wcwidth(char) != 2:
+            continue
+        seen.add(char)
+        search_name = name.lower()
+        display = f"{char}  {name.title()}"
+        print(f"{search_name}\t{display}\t{char}")
+'
+end
+
+
+# ── Main ─────────────────────────────────────────────────────────
+
+cd ~
+set selection (make_index | fzf --prompt="❯ " --no-hscroll --border=bold \
+    --delimiter='\t' --nth=1 --with-nth=2 -i \
+    --bind "enter:accept")
+
+if test -n "$selection"
+    set emoji (string split \t -- $selection)[3]
+    printf '%s' $emoji | pbcopy
+    echo "Copied $emoji"
+    return 0
+end
+return 1
