@@ -60,6 +60,7 @@ def build_index():
         # Display: emoji + label, tags right-aligned in gray
         title = f"{emoji}  {label.title()}"
         tag_text = ", ".join(tags)
+
         padding = " " * max(4, LINE_WIDTH - len(title) - len(tag_text))
         display = f"{title}{padding}\033[90m{tag_text}\033[0m"
 

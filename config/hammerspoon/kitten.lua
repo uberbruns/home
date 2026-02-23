@@ -21,7 +21,7 @@ local OVERLAY_COLOR = { black = true, alpha = 0.8 }
 -- State
 --------------------------------------------------
 
-local backdropVisible = false
+local isBackdropVisible = false
 local borderCanvas = nil
 local overlayCanvas = nil
 
@@ -77,8 +77,8 @@ end
 --------------------------------------------------
 
 local function showBackdrop()
-  if backdropVisible then return end
-  backdropVisible = true
+  if isBackdropVisible then return end
+  isBackdropVisible = true
 
   -- Overlay
   overlayCanvas = createOverlayCanvas()
@@ -92,8 +92,8 @@ local function showBackdrop()
 end
 
 local function hideBackdrop()
-  if not backdropVisible then return end
-  backdropVisible = false
+  if not isBackdropVisible then return end
+  isBackdropVisible = false
 
   if borderCanvas then
     deleteCanvas(borderCanvas)
@@ -109,11 +109,11 @@ end
 -- Application Watcher
 --------------------------------------------------
 
-kittenWatcher = hs.application.watcher.new(function(appName, eventType)
+local kittenWatcher = hs.application.watcher.new(function(appName, eventType)
   if eventType == hs.application.watcher.activated then
     if appName == APP_NAME then
       showBackdrop()
-    elseif backdropVisible then
+    elseif isBackdropVisible then
       hideBackdrop()
     end
   elseif appName == APP_NAME

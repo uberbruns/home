@@ -1,15 +1,15 @@
 --[[
   App Launcher with Tiling Layout
 
-  - Apps are queued as action objects with type and bundle ID
-  - Split actions can be inserted to prevent consolidation
+  - Apps are queued as action objects with a type and bundle ID
+  - Split actions can be inserted to prevent merging
   - If hyper key is held, actions accumulate in the queue
-  - If hyper key is not held, the queue is processed immediately
-  - When hyper key is released, the queue is processed
+  - If hyper key is not held, the queue processes immediately
+  - When hyper key is released, the queue processes
 
   Queue Processing:
-  - Consecutive actions with same type and bundle ID are consolidated, summing weights
-  - Split actions break consolidation without being layouted
+  - Consecutive actions with same type and bundle ID are merged, summing weights
+  - Split actions break merging without producing tiles
   - Actions separated by different apps or splits remain as separate tiles
   - Each unique app is activated (launched if needed)
   - If only one item was queued, no layout is applied
@@ -42,13 +42,14 @@ local M = {}
 -- Configuration
 --------------------------------------------------
 
+local HYPER_MODIFIERS = {"cmd", "alt", "ctrl", "shift"}
 local PADDING = 0
 local CASCADE_OFFSET_X = 0
 local CASCADE_OFFSET_Y = 0
 
 local ActionType = {
   focusOrLayout = "focusOrLayout",
-  letterRegistered = "letterRegistered",
+  letter = "letter",
   split = "split",
 }
 
@@ -60,23 +61,20 @@ local registeredLetters = {}
 -- Forward Declarations
 --------------------------------------------------
 
+local activateApp
+local applyLayout
+local assignWindowsToTiles
 local bringWindowsToFront
-local collectAllWindows
-local consolidateActions
-local convertLetterActionsToAppActions
-local createFocusOrLayoutAction
-local createLetterAction
-local createSplitAction
-local createTilesFromActions
-local determineTargetScreen
-local distributeWindowsToTiles
+local buildTiles
+local collectWindows
 local enqueueAction
-local ensureAppRunning
 local isHyperHeld
-local layoutTiles
-local layoutTilesOnScreen
-local layoutWindow
+local mergeConsecutiveActions
+local positionTiles
+local positionWindow
 local processQueue
+local resolveLetterActions
+local resolveTargetScreen
 local restoreFocus
 
 --------------------------------------------------
@@ -86,36 +84,32 @@ local restoreFocus
 --- Queues an app for focus or tiling layout by bundle ID.
 --- If hyper is held, the action accumulates; otherwise it processes immediately.
 function M.queueAppForLayout(bundleID)
-  enqueueAction(createFocusOrLayoutAction(bundleID))
+  enqueueAction({ id = bundleID, type = ActionType.focusOrLayout, weight = 1 })
 end
 
 --- Registers an app shortcut for multi-letter tiling activation.
 --- Each letter in the shortcut is bound as a hyper hotkey.
 function M.registerApp(shortcut, bundleID, defaultWeight)
-  -- Store app registration
   registeredApps[shortcut] = { bundleID = bundleID, defaultWeight = defaultWeight or 1 }
 
-  -- Bind hotkey for each letter in the shortcut
   for i = 1, #shortcut do
     local letter = shortcut:sub(i, i)
 
     if not registeredLetters[letter] then
       registeredLetters[letter] = true
 
-      local hyper = {"cmd", "alt", "ctrl", "shift"}
-      hs.hotkey.bind(hyper, letter, function()
-        enqueueAction(createLetterAction(letter))
+      hs.hotkey.bind(HYPER_MODIFIERS, letter, function()
+        enqueueAction({ id = letter, type = ActionType.letter, weight = 1 })
       end)
     end
   end
 end
 
 --- Binds a hyper key to insert a split action into the queue.
---- Splits prevent consolidation of adjacent app actions.
+--- Splits prevent merging of adjacent app actions.
 function M.setSplitKey(key)
-  local hyper = {"cmd", "alt", "ctrl", "shift"}
-  hs.hotkey.bind(hyper, key, function()
-    enqueueAction(createSplitAction())
+  hs.hotkey.bind(HYPER_MODIFIERS, key, function()
+    enqueueAction({ id = nil, type = ActionType.split, weight = 1 })
   end)
 end
 
@@ -137,41 +131,38 @@ end
 function processQueue()
   if #actionQueue == 0 then return end
 
-  -- Convert letter actions to app actions
-  local processedActions = convertLetterActionsToAppActions(actionQueue)
-
-  -- Capture initial state
-  local totalCount = #processedActions
+  -- Resolve letter actions and capture initial state
+  local resolvedActions = resolveLetterActions(actionQueue)
+  local queuedCount = #resolvedActions
   local initialFocusedWindow = hs.window.focusedWindow()
 
-  -- Create tiles from processed actions
-  local tiles = createTilesFromActions(processedActions)
+  -- Build tiles from resolved actions
+  local tiles = buildTiles(resolvedActions)
 
-  -- Trigger layout for multiple items
-  if totalCount > 1 then
+  -- Apply layout for multiple items
+  if queuedCount > 1 then
     hs.timer.doAfter(0.1, function()
-      layoutTiles(tiles, initialFocusedWindow)
+      applyLayout(tiles, initialFocusedWindow)
     end)
   end
 
-  -- Clear queue
   actionQueue = {}
 end
 
 -- Resolves consecutive letter actions into app actions by matching against registered shortcuts.
-function convertLetterActionsToAppActions(actions)
-  local convertedActions = {}
-  local actionIndex = 1
+function resolveLetterActions(actions)
+  local resolvedActions = {}
+  local index = 1
 
-  while actionIndex <= #actions do
-    local action = actions[actionIndex]
+  while index <= #actions do
+    local action = actions[index]
 
-    if action.type == ActionType.letterRegistered then
+    if action.type == ActionType.letter then
       -- Collect consecutive letter actions into a sequence
       local letterSequence = ""
 
-      for i = actionIndex, #actions do
-        if actions[i].type == ActionType.letterRegistered then
+      for i = index, #actions do
+        if actions[i].type == ActionType.letter then
           letterSequence = letterSequence .. actions[i].id
         else
           break
@@ -180,96 +171,83 @@ function convertLetterActionsToAppActions(actions)
 
       -- Match longest prefix against registered apps
       local matched = false
-      local consumedLetters = 0
+      local consumedCount = 0
 
       for tryLength = #letterSequence, 1, -1 do
-        local testShortcut = letterSequence:sub(1, tryLength)
-        local registration = registeredApps[testShortcut]
+        local candidate = letterSequence:sub(1, tryLength)
+        local registration = registeredApps[candidate]
 
         if registration then
-          local action = createFocusOrLayoutAction(registration.bundleID)
-          action.value = registration.defaultWeight
-          table.insert(convertedActions, action)
-          consumedLetters = tryLength
+          table.insert(resolvedActions, {
+            id = registration.bundleID,
+            type = ActionType.focusOrLayout,
+            weight = registration.defaultWeight,
+          })
+          consumedCount = tryLength
           matched = true
           break
         end
       end
 
       if matched then
-        actionIndex = actionIndex + consumedLetters
+        index = index + consumedCount
       else
-        -- No match found, discard first letter and retry
-        actionIndex = actionIndex + 1
+        index = index + 1
       end
     else
-      -- Non-letter action, pass through
-      table.insert(convertedActions, action)
-      actionIndex = actionIndex + 1
+      table.insert(resolvedActions, action)
+      index = index + 1
     end
   end
 
-  return convertedActions
+  return resolvedActions
 end
 
 -- Merges consecutive actions with the same type and ID, summing their weights.
-function consolidateActions(actions)
+function mergeConsecutiveActions(actions)
   if #actions == 0 then return {} end
 
-  -- Initialize with first action
-  local consolidatedActions = {}
-  local currentAction = {
+  local mergedActions = {}
+  local current = {
     id = actions[1].id,
     type = actions[1].type,
-    value = actions[1].value,
+    weight = actions[1].weight,
   }
 
-  -- Merge or separate remaining actions
   for i = 2, #actions do
     local action = actions[i]
 
-    -- Split actions always break consolidation
-    if currentAction.type == ActionType.split or action.type == ActionType.split then
-      table.insert(consolidatedActions, currentAction)
-      currentAction = {
-        id = action.id,
-        type = action.type,
-        value = action.value,
-      }
+    -- Split actions always break merging
+    if current.type == ActionType.split or action.type == ActionType.split then
+      table.insert(mergedActions, current)
+      current = { id = action.id, type = action.type, weight = action.weight }
     else
-      -- Consolidate consecutive matching actions
       local actionKey = action.type .. ":" .. action.id
-      local currentKey = currentAction.type .. ":" .. currentAction.id
+      local currentKey = current.type .. ":" .. current.id
 
       if actionKey == currentKey then
-        currentAction.value = currentAction.value + action.value
+        current.weight = current.weight + action.weight
       else
-        table.insert(consolidatedActions, currentAction)
-        currentAction = {
-          id = action.id,
-          type = action.type,
-          value = action.value,
-        }
+        table.insert(mergedActions, current)
+        current = { id = action.id, type = action.type, weight = action.weight }
       end
     end
   end
 
-  -- Add final action
-  table.insert(consolidatedActions, currentAction)
-  return consolidatedActions
+  table.insert(mergedActions, current)
+  return mergedActions
 end
 
--- Consolidates actions, activates apps, and builds tile list.
-function createTilesFromActions(actions)
-  local consolidatedActions = consolidateActions(actions)
+-- Merges actions, activates apps, and builds tile list.
+function buildTiles(actions)
+  local mergedActions = mergeConsecutiveActions(actions)
 
-  -- Activate apps and create tiles
   local tiles = {}
-  for _, action in ipairs(consolidatedActions) do
+  for _, action in ipairs(mergedActions) do
     if action.type ~= ActionType.split then
-      local app = ensureAppRunning(action.id)
+      local app = activateApp(action.id)
       if app then
-        table.insert(tiles, { app = app, weight = action.value })
+        table.insert(tiles, { app = app, weight = action.weight })
       end
     end
   end
@@ -280,28 +258,24 @@ end
 -- Window Layout
 --------------------------------------------------
 
-function layoutTiles(tiles, initialFocusedWindow)
-  -- Determine target screen
-  local targetScreen = determineTargetScreen(tiles)
+function applyLayout(tiles, initialFocusedWindow)
+  local targetScreen = resolveTargetScreen(tiles)
   local screenFrame = targetScreen:frame()
 
-  -- Distribute windows to tiles
-  local tilesWithWindows = distributeWindowsToTiles(tiles)
-  local layoutedWindows = collectAllWindows(tilesWithWindows)
+  local tilesWithWindows = assignWindowsToTiles(tiles)
+  local allWindows = collectWindows(tilesWithWindows)
 
-  -- Apply layout
   if #tilesWithWindows > 0 then
-    layoutTilesOnScreen(screenFrame, tilesWithWindows)
+    positionTiles(screenFrame, tilesWithWindows)
 
-    -- Restore z-order and focus
     hs.timer.doAfter(0.01, function()
-      bringWindowsToFront(layoutedWindows)
-      restoreFocus(initialFocusedWindow, layoutedWindows, tiles)
+      bringWindowsToFront(allWindows)
+      restoreFocus(initialFocusedWindow, allWindows, tiles)
     end)
   end
 end
 
-function distributeWindowsToTiles(tiles)
+function assignWindowsToTiles(tiles)
   -- Group tiles by application
   local tilesByApp = {}
   for _, tile in ipairs(tiles) do
@@ -317,47 +291,44 @@ function distributeWindowsToTiles(tiles)
   end
 
   -- Collect standard windows for each app
-  for _, tileGroup in pairs(tilesByApp) do
-    for _, window in ipairs(tileGroup.app:allWindows()) do
+  for _, group in pairs(tilesByApp) do
+    for _, window in ipairs(group.app:allWindows()) do
       if window:isStandard() then
-        table.insert(tileGroup.windows, window)
+        table.insert(group.windows, window)
       end
     end
   end
 
   -- Assign windows to tiles
-  local tilesWithWindows = {}
+  local result = {}
   for _, tile in ipairs(tiles) do
     local bundleID = tile.app:bundleID()
-    local tileGroup = tilesByApp[bundleID]
+    local group = tilesByApp[bundleID]
 
-    if tileGroup and #tileGroup.windows > 0 then
+    if group and #group.windows > 0 then
       -- Count already assigned tiles for this app
-      local assignedTileCount = 0
-      for i = 1, #tilesWithWindows do
-        if tilesWithWindows[i].app:bundleID() == bundleID then
-          assignedTileCount = assignedTileCount + 1
+      local assignedCount = 0
+      for i = 1, #result do
+        if result[i].app:bundleID() == bundleID then
+          assignedCount = assignedCount + 1
         end
       end
 
-      -- Check if this is the last tile for this app
-      local isLastTileForApp = (assignedTileCount + 1) == #tileGroup.tiles
-      local windowsAvailable = #tileGroup.windows - assignedTileCount
+      local isLastTile = (assignedCount + 1) == #group.tiles
+      local remainingWindows = #group.windows - assignedCount
 
-      if windowsAvailable > 0 then
-        -- Assign windows to tile
+      if remainingWindows > 0 then
         local tileWindows = {}
-        if isLastTileForApp then
+        if isLastTile then
           -- Last tile gets all remaining windows
-          for i = assignedTileCount + 1, #tileGroup.windows do
-            table.insert(tileWindows, tileGroup.windows[i])
+          for i = assignedCount + 1, #group.windows do
+            table.insert(tileWindows, group.windows[i])
           end
         else
-          -- Non-last tiles get single window
-          table.insert(tileWindows, tileGroup.windows[assignedTileCount + 1])
+          table.insert(tileWindows, group.windows[assignedCount + 1])
         end
 
-        table.insert(tilesWithWindows, {
+        table.insert(result, {
           app = tile.app,
           weight = tile.weight,
           windows = tileWindows,
@@ -366,48 +337,46 @@ function distributeWindowsToTiles(tiles)
     end
   end
 
-  return tilesWithWindows
+  return result
 end
 
-function layoutTilesOnScreen(screenFrame, tiles)
+function positionTiles(screenFrame, tiles)
   -- Calculate total weight
   local totalWeight = 0
   for _, tile in ipairs(tiles) do
     totalWeight = totalWeight + tile.weight
   end
 
-  -- Position each tile and its windows
-  local tileOffset = 0
+  -- Position each tile
+  local offset = 0
   for _, tile in ipairs(tiles) do
     local normalizedWeight = tile.weight / totalWeight
-    local windowCount = #tile.windows
 
     for windowIndex, window in ipairs(tile.windows) do
-      layoutWindow(window, screenFrame, normalizedWeight, tileOffset, windowIndex - 1, windowCount)
+      positionWindow(window, screenFrame, normalizedWeight, offset, windowIndex - 1, #tile.windows)
     end
 
-    tileOffset = tileOffset + normalizedWeight
+    offset = offset + normalizedWeight
   end
 end
 
-function layoutWindow(window, screenFrame, weight, tileOffset, windowIndex, windowCount)
+function positionWindow(window, screenFrame, weight, tileOffset, windowIndex, windowCount)
   -- Calculate cascade offsets
-  local cascadeOffsetX = CASCADE_OFFSET_X * (windowCount - 1)
-  local cascadeOffsetY = CASCADE_OFFSET_Y * (windowCount - 1)
+  local cascadeX = CASCADE_OFFSET_X * (windowCount - 1)
+  local cascadeY = CASCADE_OFFSET_Y * (windowCount - 1)
 
-  -- Calculate available space (screen minus padding on all sides)
+  -- Calculate available space
   local availableHeight = screenFrame.h - (2 * PADDING)
   local availableWidth = screenFrame.w - (2 * PADDING)
   local availableX = screenFrame.x + PADDING
   local availableY = screenFrame.y + PADDING
 
-  -- Calculate window frame with padding between tiles
-  local height = availableHeight - cascadeOffsetY
-  local width = availableWidth * weight - PADDING - cascadeOffsetX
+  -- Calculate window frame
+  local height = availableHeight - cascadeY
+  local width = availableWidth * weight - PADDING - cascadeX
   local x = availableX + availableWidth * tileOffset + CASCADE_OFFSET_X * windowIndex
   local y = availableY + CASCADE_OFFSET_Y * windowIndex
 
-  -- Apply frame
   window:setFrame(hs.geometry.rect(x, y, width, height), 0)
 end
 
@@ -415,68 +384,7 @@ end
 -- Supporting Functions
 --------------------------------------------------
 
-function bringWindowsToFront(windows)
-  -- Raise in reverse order to preserve relative z-order
-  for i = #windows, 1, -1 do
-    windows[i]:raise()
-  end
-end
-
-function collectAllWindows(tilesWithWindows)
-  local allWindows = {}
-  for _, tile in ipairs(tilesWithWindows) do
-    for _, window in ipairs(tile.windows) do
-      table.insert(allWindows, window)
-    end
-  end
-  return allWindows
-end
-
-function createFocusOrLayoutAction(bundleID)
-  return {
-    id = bundleID,
-    type = ActionType.focusOrLayout,
-    value = 1,
-  }
-end
-
-function createLetterAction(letter)
-  return {
-    id = letter,
-    type = ActionType.letterRegistered,
-    value = 1,
-  }
-end
-
-function createSplitAction()
-  return {
-    id = nil,
-    type = ActionType.split,
-    value = 1,
-  }
-end
-
-function determineTargetScreen(tiles)
-  -- Prefer first app's main window screen
-  if #tiles > 0 then
-    local mainWindow = tiles[1].app:mainWindow()
-    if mainWindow then
-      return mainWindow:screen()
-    end
-  end
-
-  -- Fallback to focused window screen
-  local focusedWindow = hs.window.focusedWindow()
-  if focusedWindow then
-    return focusedWindow:screen()
-  end
-
-  -- Final fallback to main screen
-  return hs.screen.mainScreen()
-end
-
-function ensureAppRunning(bundleID)
-  -- Activate if running, otherwise launch
+function activateApp(bundleID)
   local app = hs.application.get(bundleID)
   if app then
     app:activate()
@@ -486,16 +394,52 @@ function ensureAppRunning(bundleID)
   return hs.application.get(bundleID)
 end
 
-function isHyperHeld()
-  local modifierFlags = hs.eventtap.checkKeyboardModifiers()
-  return modifierFlags.alt and modifierFlags.cmd and modifierFlags.ctrl and modifierFlags.shift
+function bringWindowsToFront(windows)
+  -- Raise in reverse order to preserve relative z-order
+  for i = #windows, 1, -1 do
+    windows[i]:raise()
+  end
 end
 
-function restoreFocus(initialFocusedWindow, layoutedWindows, tiles)
-  -- Restore focus to initially focused window if it was layouted
+function collectWindows(tilesWithWindows)
+  local allWindows = {}
+  for _, tile in ipairs(tilesWithWindows) do
+    for _, window in ipairs(tile.windows) do
+      table.insert(allWindows, window)
+    end
+  end
+  return allWindows
+end
+
+function isHyperHeld()
+  local flags = hs.eventtap.checkKeyboardModifiers()
+  return flags.alt and flags.cmd and flags.ctrl and flags.shift
+end
+
+function resolveTargetScreen(tiles)
+  -- Prefer first app's main window screen
+  if #tiles > 0 then
+    local mainWindow = tiles[1].app:mainWindow()
+    if mainWindow then
+      return mainWindow:screen()
+    end
+  end
+
+  -- Fall back to focused window screen
+  local focusedWindow = hs.window.focusedWindow()
+  if focusedWindow then
+    return focusedWindow:screen()
+  end
+
+  -- Final fallback to main screen
+  return hs.screen.mainScreen()
+end
+
+function restoreFocus(initialFocusedWindow, tiledWindows, tiles)
+  -- Restore focus to initially focused window if it was tiled
   if initialFocusedWindow then
     local initialWindowId = initialFocusedWindow:id()
-    for _, window in ipairs(layoutedWindows) do
+    for _, window in ipairs(tiledWindows) do
       if window:id() == initialWindowId then
         initialFocusedWindow:focus()
         return
@@ -503,7 +447,7 @@ function restoreFocus(initialFocusedWindow, layoutedWindows, tiles)
     end
   end
 
-  -- Fallback to first app's main window
+  -- Fall back to first app's main window
   if #tiles > 0 then
     local mainWindow = tiles[1].app:mainWindow()
     if mainWindow then
