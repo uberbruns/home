@@ -1,6 +1,7 @@
 /cache
 /config.toml
 /.claude/settings.local.json
+config/fish/fish_variables
 __pycache__/
 *.tmp.*
 /tmp
