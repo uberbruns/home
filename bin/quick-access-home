@@ -97,6 +97,26 @@ def build_bookmark_index():
     return lines
 
 
+def build_repository_index():
+    """Build index rows from git repositories under ~/Development."""
+    dev_dir = os.path.expanduser("~/Development")
+    result = subprocess.run(
+        ["list-repositories", "-t", dev_dir],
+        text=True, capture_output=True,
+    )
+    if result.returncode != 0:
+        return []
+
+    lines = []
+    for line in result.stdout.splitlines():
+        repo_name, relative_parent = line.split("\t", 1)
+        absolute_path = os.path.join(dev_dir, relative_parent, repo_name)
+        display = format_row("[Dev]", "33", repo_name, relative_parent)
+        search_key = f"{repo_name} {relative_parent}"
+        lines.append(f"{search_key}\t{display}\topen -a ghostty {absolute_path}")
+    return lines
+
+
 def build_app_index():
     """Build index rows from macOS apps found via Spotlight."""
     result = subprocess.run(
@@ -123,7 +143,7 @@ def build_app_index():
 
 def build_index():
     """Aggregate all index sources."""
-    return "\n".join(build_subcommand_index() + build_tool_index() + build_bookmark_index() + build_app_index())
+    return "\n".join(build_subcommand_index() + build_tool_index() + build_bookmark_index() + build_repository_index() + build_app_index())
 
 
 # --------------------------------------------------------------------------- #

@@ -4,6 +4,7 @@
 # Imports
 # ============================================================
 
+import shutil
 import subprocess
 
 from .command_link import execute_link
@@ -57,12 +58,14 @@ def reload_fish_shell() -> None:
 
 def reload_hammerspoon() -> None:
     """Reload Hammerspoon configuration via IPC."""
+    if not shutil.which('hs'):
+        print_warning("Skipping Hammerspoon reload (hs not found)")
+        return
+
     print_header("Reloading Hammerspoon")
 
     try:
         subprocess.run(['hs', '-c', 'hs.reload()'], check=True)
         print_success("Hammerspoon reloaded")
-    except FileNotFoundError:
-        print_warning("Skipping Hammerspoon reload (hs not found)")
     except subprocess.CalledProcessError:
         print_warning("Skipping Hammerspoon reload (command failed)")
