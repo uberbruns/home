@@ -9,7 +9,11 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import unicodedata
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
+from safari_bookmarks import extract_bookmarks, filter_bookmarks, load_plist
 
 
 # --------------------------------------------------------------------------- #
@@ -23,19 +27,24 @@ MAX_PATH_DEPTH = 5
 FZF_ARGS = [
     "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll",
     "--color=16",
-    "--color=prompt:5,bg+:0,fg+:15:regular,hl:regular,hl+:regular",
+    "--color=prompt:15,bg+:0,fg+:15:regular,hl:regular,hl+:regular,gutter:0,pointer:15",
+    "--pointer=▌", "--no-scrollbar",
     "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
     "--bind", "enter:accept",
 ]
 
-ACTIONS = [
+SUBCOMMANDS = [
+    # (name, noun, description, command)
+    ("Bookmarks", "bookmarks", "Open Safari bookmark in browser", "quick-access-bookmarks"),
+    ("Clipboard History", "clipboard", "Paste from history via clipse", "quick-access-clipboard"),
+    ("Emoji Picker", "emoji", "Search and copy emoji to clipboard", "quick-access-emojis"),
+]
+
+TOOLS = [
     # (name, noun, description, command)
     ("Astroterm", "sky stars", "Night sky over Hamburg", "astroterm -cuq --city=Hamburg"),
-    ("Bookmarks", "bookmarks", "Open Safari bookmark in browser", "quick-access-bookmarks"),
     ("Calculator", "calculator", "Math expressions via qalc", "qalc"),
-    ("Clipboard History", "clipboard", "Paste from history via clipse", "quick-access-clipboard"),
     ("Editor", "editor", "Terminal editor via fresh", "fresh"),
-    ("Emoji Picker", "emoji", "Search and copy emoji to clipboard", "quick-access-emojis"),
     ("File Browser", "files", "Navigate filesystem via yazi", "yazi"),
     ("Swift REPL", "repl", "Interactive Swift playground", "swift repl"),
 ]
@@ -45,17 +54,46 @@ ACTIONS = [
 # Implementation
 # --------------------------------------------------------------------------- #
 
-def build_action_index():
-    """Build index rows from registered actions."""
+def build_subcommand_index():
+    """Build index rows from quick-access subcommands."""
+    return _build_command_index(SUBCOMMANDS, "  ⮑  ", "35")
+
+
+def build_tool_index():
+    """Build index rows from CLI tool invocations."""
+    return _build_command_index(TOOLS, "[CLI]", "32")
+
+
+def _build_command_index(entries, type_label, type_color):
+    """Build index rows from a list of command entries."""
     lines = []
-    for name, noun, description, command in ACTIONS:
+    for name, noun, description, command in entries:
         cmd_name = command.split()[0]
         if not shutil.which(cmd_name):
             continue
 
-        display = format_row("Action", "32", name, description)
+        display = format_row(type_label, type_color, name, description)
         search_key = f"{name} {noun} {description}"
         lines.append(f"{search_key}\t{display}\t{command}")
+    return lines
+
+
+def build_bookmark_index():
+    """Build index rows from Safari BookmarksBar."""
+    try:
+        bookmarks = filter_bookmarks(
+            extract_bookmarks(load_plist()),
+            root="BookmarksBar",
+        )
+    except Exception:
+        return []
+
+    lines = []
+    for folder, title, url in bookmarks:
+        display_folder = folder.replace("/", " > ") if folder else ""
+        display = format_row("[URL]", "34", title, display_folder)
+        search_key = f"{title} {folder} {url}"
+        lines.append(f"{search_key}\t{display}\topen '{url}'")
     return lines
 
 
@@ -78,14 +116,14 @@ def build_app_index():
         app_dir = app_path.rsplit("/", 1)[0]
         app_name = app_path.rsplit("/", 1)[1].removesuffix(".app")
 
-        display = format_row("App", "35", app_name, app_dir)
+        display = format_row("[App]", "35", app_name, app_dir)
         lines.append(f"{app_path}\t{display}\topen '{app_path}'")
     return lines
 
 
 def build_index():
     """Aggregate all index sources."""
-    return "\n".join(build_action_index() + build_app_index())
+    return "\n".join(build_subcommand_index() + build_tool_index() + build_bookmark_index() + build_app_index())
 
 
 # --------------------------------------------------------------------------- #
@@ -102,8 +140,8 @@ def format_row(type_label, type_color, title, details):
     if len(details) > MAX_DETAILS_WIDTH:
         details = details[:MAX_DETAILS_WIDTH - 2] + ".."
 
-    tag = f"\033[{type_color}m[{type_label}]\033[0m"
-    tag_len = 2 + len(type_label)
+    tag = f"\033[{type_color}m{type_label}\033[0m"
+    tag_len = len(type_label)
 
     padding_len = LINE_WIDTH - tag_len - 1 - display_width(title) - len(details)
     if padding_len < 1:

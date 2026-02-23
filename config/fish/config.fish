@@ -32,6 +32,7 @@ if status is-interactive
   # Tools
   #==================================================
 
+  clipse -listen &>/dev/null &
   starship init fish | source
   mise activate fish | source
 
