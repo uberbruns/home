@@ -10,3 +10,9 @@
 [submodule "externals/kovidgoyal/kitty"]
 	path = externals/kovidgoyal/kitty
 	url = https://github.com/kovidgoyal/kitty
+[submodule "externals/milesj/emojibase"]
+	path = externals/milesj/emojibase
+	url = https://github.com/milesj/emojibase
+[submodule "externals/jdx/mise"]
+	path = externals/jdx/mise
+	url = https://github.com/jdx/mise/

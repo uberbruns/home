@@ -91,9 +91,9 @@ end
 
 --- Registers an app shortcut for multi-letter tiling activation.
 --- Each letter in the shortcut is bound as a hyper hotkey.
-function M.registerApp(shortcut, bundleID)
+function M.registerApp(shortcut, bundleID, defaultWeight)
   -- Store app registration
-  registeredApps[shortcut] = bundleID
+  registeredApps[shortcut] = { bundleID = bundleID, defaultWeight = defaultWeight or 1 }
 
   -- Bind hotkey for each letter in the shortcut
   for i = 1, #shortcut do
@@ -184,10 +184,12 @@ function convertLetterActionsToAppActions(actions)
 
       for tryLength = #letterSequence, 1, -1 do
         local testShortcut = letterSequence:sub(1, tryLength)
-        local bundleID = registeredApps[testShortcut]
+        local registration = registeredApps[testShortcut]
 
-        if bundleID then
-          table.insert(convertedActions, createFocusOrLayoutAction(bundleID))
+        if registration then
+          local action = createFocusOrLayoutAction(registration.bundleID)
+          action.value = registration.defaultWeight
+          table.insert(convertedActions, action)
           consumedLetters = tryLength
           matched = true
           break

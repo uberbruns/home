@@ -4,6 +4,7 @@
 # Imports
 # ============================================================
 
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -24,12 +25,16 @@ class Config:
     """Configuration paths and global state."""
 
     def __init__(self):
-        # Resolve repository root directory
-        self.repo_root = Path(__file__).parent.parent.parent.resolve()
-
-        # Validate repository is a git directory
-        if not (self.repo_root / ".git").exists():
-            print(f"Error: Not a git repository: {self.repo_root}", file=sys.stderr)
+        # Resolve repository root directory via git
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                capture_output=True, text=True, check=True,
+                cwd=Path(__file__).parent,
+            )
+            self.repo_root = Path(result.stdout.strip())
+        except subprocess.CalledProcessError:
+            print("Error: Not inside a git repository", file=sys.stderr)
             sys.exit(1)
 
         # Configuration file paths

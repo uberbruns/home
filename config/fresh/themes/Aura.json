@@ -1,0 +1,450 @@
+{
+  "name": "Aura",
+  "editor": {
+    "bg": [
+      33,
+      32,
+      46
+    ],
+    "fg": [
+      237,
+      236,
+      238
+    ],
+    "cursor": [
+      162,
+      119,
+      255
+    ],
+    "inactive_cursor": [
+      109,
+      109,
+      109
+    ],
+    "selection_bg": [
+      61,
+      55,
+      94
+    ],
+    "current_line_bg": [
+      40,
+      39,
+      55
+    ],
+    "line_number_fg": [
+      100,
+      95,
+      140
+    ],
+    "line_number_bg": [
+      33,
+      32,
+      46
+    ],
+    "diff_add_bg": [
+      28,
+      57,
+      59
+    ],
+    "diff_remove_bg": [
+      61,
+      37,
+      49
+    ],
+    "diff_modify_bg": [
+      50,
+      45,
+      40
+    ]
+  },
+  "ui": {
+    "tab_active_fg": [
+      97,
+      255,
+      202
+    ],
+    "tab_active_bg": [
+      33,
+      32,
+      46
+    ],
+    "tab_inactive_fg": [
+      109,
+      109,
+      109
+    ],
+    "tab_inactive_bg": [
+      33,
+      32,
+      46
+    ],
+    "tab_separator_bg": [
+      20,
+      20,
+      20
+    ],
+    "tab_close_hover_fg": [
+      255,
+      103,
+      103
+    ],
+    "tab_hover_bg": [
+      59,
+      51,
+      75
+    ],
+    "menu_bg": [
+      31,
+      26,
+      39
+    ],
+    "menu_fg": [
+      205,
+      204,
+      206
+    ],
+    "menu_active_bg": [
+      46,
+      43,
+      56
+    ],
+    "menu_active_fg": [
+      162,
+      119,
+      255
+    ],
+    "menu_dropdown_bg": [
+      31,
+      26,
+      39
+    ],
+    "menu_dropdown_fg": [
+      205,
+      204,
+      206
+    ],
+    "menu_highlight_bg": [
+      162,
+      119,
+      255
+    ],
+    "menu_highlight_fg": [
+      33,
+      32,
+      46
+    ],
+    "menu_border_fg": [
+      68,
+      68,
+      68
+    ],
+    "menu_separator_fg": [
+      59,
+      51,
+      75
+    ],
+    "menu_hover_bg": [
+      59,
+      51,
+      75
+    ],
+    "menu_hover_fg": [
+      237,
+      236,
+      238
+    ],
+    "menu_disabled_fg": [
+      109,
+      109,
+      109
+    ],
+    "menu_disabled_bg": [
+      31,
+      26,
+      39
+    ],
+    "status_bar_fg": [
+      173,
+      172,
+      174
+    ],
+    "status_bar_bg": [
+      31,
+      26,
+      39
+    ],
+    "prompt_fg": [
+      205,
+      204,
+      206
+    ],
+    "prompt_bg": [
+      28,
+      27,
+      34
+    ],
+    "prompt_selection_fg": [
+      237,
+      236,
+      238
+    ],
+    "prompt_selection_bg": [
+      61,
+      55,
+      94
+    ],
+    "popup_border_fg": [
+      68,
+      68,
+      68
+    ],
+    "popup_bg": [
+      31,
+      26,
+      39
+    ],
+    "popup_selection_bg": [
+      61,
+      55,
+      94
+    ],
+    "popup_text_fg": [
+      205,
+      204,
+      206
+    ],
+    "suggestion_bg": [
+      31,
+      26,
+      39
+    ],
+    "suggestion_selected_bg": [
+      61,
+      55,
+      94
+    ],
+    "help_bg": [
+      28,
+      27,
+      34
+    ],
+    "help_fg": [
+      237,
+      236,
+      238
+    ],
+    "help_key_fg": [
+      97,
+      255,
+      202
+    ],
+    "help_separator_fg": [
+      109,
+      109,
+      109
+    ],
+    "help_indicator_fg": [
+      255,
+      103,
+      103
+    ],
+    "help_indicator_bg": [
+      28,
+      27,
+      34
+    ],
+    "inline_code_bg": [
+      46,
+      43,
+      56
+    ],
+    "split_separator_fg": [
+      68,
+      68,
+      68
+    ],
+    "split_separator_hover_fg": [
+      162,
+      119,
+      255
+    ],
+    "scrollbar_track_fg": [
+      68,
+      68,
+      68
+    ],
+    "scrollbar_thumb_fg": [
+      100,
+      95,
+      140
+    ],
+    "scrollbar_track_hover_fg": [
+      100,
+      95,
+      140
+    ],
+    "scrollbar_thumb_hover_fg": [
+      162,
+      119,
+      255
+    ],
+    "compose_margin_bg": [
+      28,
+      27,
+      34
+    ],
+    "semantic_highlight_bg": [
+      61,
+      55,
+      94
+    ],
+    "terminal_bg": "Default",
+    "terminal_fg": "Default",
+    "status_warning_indicator_bg": [
+      255,
+      202,
+      133
+    ],
+    "status_warning_indicator_fg": [
+      33,
+      32,
+      46
+    ],
+    "status_error_indicator_bg": [
+      255,
+      103,
+      103
+    ],
+    "status_error_indicator_fg": [
+      33,
+      32,
+      46
+    ],
+    "status_warning_indicator_hover_bg": [
+      255,
+      220,
+      170
+    ],
+    "status_warning_indicator_hover_fg": [
+      33,
+      32,
+      46
+    ],
+    "status_error_indicator_hover_bg": [
+      255,
+      140,
+      140
+    ],
+    "status_error_indicator_hover_fg": [
+      33,
+      32,
+      46
+    ],
+    "tab_drop_zone_bg": [
+      40,
+      60,
+      55
+    ],
+    "tab_drop_zone_border": [
+      97,
+      255,
+      202
+    ]
+  },
+  "search": {
+    "match_bg": [
+      80,
+      70,
+      40
+    ],
+    "match_fg": [
+      255,
+      202,
+      133
+    ]
+  },
+  "diagnostic": {
+    "error_fg": [
+      255,
+      103,
+      103
+    ],
+    "error_bg": [
+      60,
+      30,
+      35
+    ],
+    "warning_fg": [
+      255,
+      202,
+      133
+    ],
+    "warning_bg": [
+      55,
+      45,
+      30
+    ],
+    "info_fg": [
+      130,
+      226,
+      255
+    ],
+    "info_bg": [
+      30,
+      40,
+      55
+    ],
+    "hint_fg": [
+      109,
+      109,
+      109
+    ],
+    "hint_bg": [
+      33,
+      32,
+      46
+    ]
+  },
+  "syntax": {
+    "keyword": [
+      162,
+      119,
+      255
+    ],
+    "string": [
+      97,
+      255,
+      202
+    ],
+    "comment": [
+      109,
+      109,
+      109
+    ],
+    "function": [
+      255,
+      202,
+      133
+    ],
+    "type": [
+      130,
+      226,
+      255
+    ],
+    "variable": [
+      237,
+      236,
+      238
+    ],
+    "constant": [
+      97,
+      255,
+      202
+    ],
+    "operator": [
+      162,
+      119,
+      255
+    ]
+  }
+}

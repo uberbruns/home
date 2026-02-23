@@ -20,6 +20,7 @@ local tiling = require("tiling")
 
 require("bookmarks")
 require("hyperkey")
+require("kitten")
 
 -- Tiling
 tiling.registerApp("ad", "com.seriflabs.affinitydesigner2")
@@ -42,7 +43,8 @@ tiling.registerApp("ph", "com.apple.Photos")
 tiling.registerApp("pl", "tv.plex.desktop")
 tiling.registerApp("pr", "com.apple.Preview")
 tiling.registerApp("pw", "com.1password.1password")
-tiling.registerApp("sl", "com.prusa3d.slic3r")
+tiling.registerApp("ps", "com.prusa3d.slic3r")
+tiling.registerApp("s", "com.apple.iphonesimulator", 1/3)
 tiling.registerApp("t", "com.mitchellh.ghostty")
 tiling.registerApp("w", "com.apple.Safari")
 tiling.registerApp("x", "com.apple.dt.Xcode")
@@ -50,7 +52,7 @@ tiling.setSplitKey("space")
 
 --Quick Access Terminal
 hs.hotkey.bind({"cmd", "shift"}, "space", function()
-  hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal", "quick-access-apps"}):start()
+  hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal"}):start()
 end)
 
 -- hs.hotkey.bind({"cmd", "shift"}, "space", function()

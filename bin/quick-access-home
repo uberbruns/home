@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Quick-access launcher combining macOS apps and registered actions.
+
+Presents a unified fzf index; selecting an item runs its action.
+Escape exits; returning from a sub-picker loops back to home.
+"""
+
+import os
+import re
+import shutil
+import subprocess
+import unicodedata
+
+
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
+
+LINE_WIDTH = 84
+MAX_DETAILS_WIDTH = 40
+MAX_PATH_DEPTH = 5
+
+FZF_ARGS = [
+    "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll",
+    "--color=16",
+    "--color=prompt:5,bg+:0,fg+:15:regular,hl:regular,hl+:regular",
+    "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
+    "--bind", "enter:accept",
+]
+
+ACTIONS = [
+    # (name, noun, description, command)
+    ("Astroterm", "sky stars", "Night sky over Hamburg", "astroterm -cuq --city=Hamburg"),
+    ("Bookmarks", "bookmarks", "Open Safari bookmark in browser", "quick-access-bookmarks"),
+    ("Calculator", "calculator", "Math expressions via qalc", "qalc"),
+    ("Clipboard History", "clipboard", "Paste from history via clipse", "quick-access-clipboard"),
+    ("Editor", "editor", "Terminal editor via fresh", "fresh"),
+    ("Emoji Picker", "emoji", "Search and copy emoji to clipboard", "quick-access-emojis"),
+    ("File Browser", "files", "Navigate filesystem via yazi", "yazi"),
+    ("Swift REPL", "repl", "Interactive Swift playground", "swift repl"),
+]
+
+
+# --------------------------------------------------------------------------- #
+# Implementation
+# --------------------------------------------------------------------------- #
+
+def build_action_index():
+    """Build index rows from registered actions."""
+    lines = []
+    for name, noun, description, command in ACTIONS:
+        cmd_name = command.split()[0]
+        if not shutil.which(cmd_name):
+            continue
+
+        display = format_row("Action", "32", name, description)
+        search_key = f"{name} {noun} {description}"
+        lines.append(f"{search_key}\t{display}\t{command}")
+    return lines
+
+
+def build_app_index():
+    """Build index rows from macOS apps found via Spotlight."""
+    result = subprocess.run(
+        ["mdfind", 'kMDItemContentType == "com.apple.application-bundle"'],
+        text=True, capture_output=True,
+    )
+    depth_pattern = re.compile(r"^(/[^/]+){1," + str(MAX_PATH_DEPTH) + r"}$")
+    nested_pattern = re.compile(r"/[^/]*\.[^/]*/.*\.app$")
+
+    lines = []
+    for app_path in sorted(result.stdout.splitlines()):
+        if not depth_pattern.match(app_path):
+            continue
+        if nested_pattern.search(app_path):
+            continue
+
+        app_dir = app_path.rsplit("/", 1)[0]
+        app_name = app_path.rsplit("/", 1)[1].removesuffix(".app")
+
+        display = format_row("App", "35", app_name, app_dir)
+        lines.append(f"{app_path}\t{display}\topen '{app_path}'")
+    return lines
+
+
+def build_index():
+    """Aggregate all index sources."""
+    return "\n".join(build_action_index() + build_app_index())
+
+
+# --------------------------------------------------------------------------- #
+# Formatting
+# --------------------------------------------------------------------------- #
+
+def display_width(text):
+    """Return terminal column count, treating wide characters as 2 columns."""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
+
+
+def format_row(type_label, type_color, title, details):
+    """Format a row with colored type tag, title, and right-aligned details."""
+    if len(details) > MAX_DETAILS_WIDTH:
+        details = details[:MAX_DETAILS_WIDTH - 2] + ".."
+
+    tag = f"\033[{type_color}m[{type_label}]\033[0m"
+    tag_len = 2 + len(type_label)
+
+    padding_len = LINE_WIDTH - tag_len - 1 - display_width(title) - len(details)
+    if padding_len < 1:
+        padding_len = 1
+    padding = " " * padding_len
+
+    return f"{tag} {title}{padding}\033[90m{details}\033[0m"
+
+
+# --------------------------------------------------------------------------- #
+# Main
+# --------------------------------------------------------------------------- #
+
+def main():
+    os.chdir(os.path.expanduser("~"))
+
+    while True:
+        index = build_index()
+        result = subprocess.run(FZF_ARGS, input=index, text=True, capture_output=True)
+        if result.returncode != 0 or not result.stdout.strip():
+            break
+
+        action = result.stdout.strip().split("\t")[2]
+        r = subprocess.run(["/bin/sh", "-c", action])
+        if r.returncode == 0:
+            break
+
+
+if __name__ == "__main__":
+    main()

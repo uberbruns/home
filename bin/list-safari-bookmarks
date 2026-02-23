@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Extract and display Safari bookmarks.
+
+Reads ~/Library/Safari/Bookmarks.plist and prints bookmarks as
+folder/title  url, with optional filtering and truncation.
+"""
+
+import argparse
+import os
+import shutil
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
+from safari_bookmarks import (
+    extract_bookmarks, filter_bookmarks, load_plist,
+    print_formatted, print_raw,
+)
+
+
+# --------------------------------------------------------------------------- #
+# Main
+# --------------------------------------------------------------------------- #
+
+def main():
+    """Parse arguments, extract bookmarks, and print results."""
+    args = parse_args()
+
+    # Extract and filter
+    bookmarks = filter_bookmarks(
+        extract_bookmarks(load_plist()),
+        excludes=args.exclude or None,
+        includes=args.include or None,
+        root=args.root,
+    )
+
+    # Print
+    if args.raw:
+        print_raw(bookmarks, args.delimiter)
+    else:
+        print_formatted(bookmarks, args.delimiter,
+                        shutil.get_terminal_size().columns,
+                        args.truncate, args.truncate_url)
+
+
+# --------------------------------------------------------------------------- #
+# Configuration
+# --------------------------------------------------------------------------- #
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Extract Safari bookmarks")
+    parser.add_argument("-1", "--raw", dest="raw", action="store_true",
+                        help="machine-readable output: tab-separated, no truncation (default: off)")
+    parser.add_argument("-d", "--delimiter", default="/",
+                        help="output folder delimiter (default: /)")
+    parser.add_argument("-e", "--exclude", action="append", default=[],
+                        help="exclude paths matching glob pattern, repeatable (default: none)")
+    parser.add_argument("-i", "--include", action="append", default=[],
+                        help="include only paths matching glob pattern, repeatable, OR semantics (default: all)")
+    parser.add_argument("-r", "--root", default="",
+                        help="root folder prefix to filter by, uses / as delimiter (default: none)")
+    parser.add_argument("-t", "--truncate", type=int, default=0,
+                        help="truncate path to N characters, 0 = auto (default: 0)")
+    parser.add_argument("-u", "--truncate-url", type=int, default=0,
+                        help="truncate url to N characters, 0 = auto (default: 0)")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    main()

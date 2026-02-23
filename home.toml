@@ -6,6 +6,10 @@ labels = ["macos"]
 target = "~/.config/fish"
 labels = [["macos", "linux"], "cli"]
 
+[fresh]
+target = "~/.config/fresh"
+labels = [["macos", "linux"], "cli"]
+
 [[ghostty]]
 source = "config/ghostty/shared"
 target = "~/Library/Application Support/com.mitchellh.ghostty"

@@ -8,12 +8,6 @@ fish_add_path /Users/prefect/.local/bin
 fish_add_path /opt/homebrew/bin
 fish_add_path ~/.home/bin
 
-#==================================================
-# Tools
-#==================================================
-
-starship init fish | source
-mise activate fish | source
 
 #==================================================
 # Environment
@@ -30,13 +24,21 @@ if test (whoami) = prefect
   alias brew="sudo -i -u karsten brew"
 end
 alias ai="claude -p"
-alias home="~/.home/bin/home.py"
 
-#==================================================
-# Interactive
-#==================================================
 
 if status is-interactive
+
+  #==================================================
+  # Tools
+  #==================================================
+
+  starship init fish | source
+  mise activate fish | source
+
+
+  #==================================================
+  # Styling
+  #==================================================
 
   # Cursor shapes
   set -U fish_greeting ''
@@ -45,6 +47,11 @@ if status is-interactive
   set -U fish_cursor_insert block
   set -U fish_cursor_replace_one underscore
   set -U fish_cursor_visual block
+
+
+  #==================================================
+  # Keybindings
+  #==================================================
 
   # fzf key bindings
   fzf_configure_bindings --directory=super-f --git_log=super-l --git_status=super-s --history=super-r --processes=super-p --variables=super-v
