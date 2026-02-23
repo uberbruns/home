@@ -82,3 +82,10 @@ if status is-interactive
     bind ''                kill-selection end-selection self-insert
   end
 end
+
+
+if test -d ~/.rd/bin
+### MANAGED BY RANCHER DESKTOP START (DO NOT EDIT)
+set --export --prepend PATH "/Users/karsten/.rd/bin"
+### MANAGED BY RANCHER DESKTOP END (DO NOT EDIT)
+end
