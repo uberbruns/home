@@ -4,6 +4,7 @@
 -- /_/|_|\__/\_, /\_,_/_/_/  \__/
 --           /_/
 
+require("hs.ipc")
 local hotkeys = require("hotkeys")
 local bindApp = hotkeys.bindApp
 local bindWindowLocation = hotkeys.bindWindowLocation
