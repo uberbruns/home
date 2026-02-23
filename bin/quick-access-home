@@ -20,7 +20,6 @@ from safari_bookmarks import extract_bookmarks, filter_bookmarks, load_plist
 # --------------------------------------------------------------------------- #
 
 LINE_WIDTH = 84
-MAX_DETAILS_WIDTH = 40
 
 FZF_ARGS = [
     "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll",
@@ -150,16 +149,10 @@ def display_width(text):
 
 def format_row(type_label, type_color, title, details):
     """Format a row with colored type tag, title, and right-aligned details."""
-    if len(details) > MAX_DETAILS_WIDTH:
-        details = details[:MAX_DETAILS_WIDTH - 2] + ".."
-
     tag = f"\033[{type_color}m{type_label}\033[0m"
     tag_len = len(type_label)
 
-    padding_len = LINE_WIDTH - tag_len - 1 - display_width(title) - len(details)
-    if padding_len < 1:
-        padding_len = 1
-    padding = " " * padding_len
+    padding = " " * max(4, LINE_WIDTH - tag_len - 1 - display_width(title) - len(details))
 
     return f"{tag} {title}{padding}\033[90m{details}\033[0m"
 
