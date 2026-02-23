@@ -60,6 +60,21 @@ source = "config/mise/dev-apple.toml"
 target = "~/.config/mise/conf.d/dev-apple.toml"
 labels = ["dev-apple"]
 
+[[claude]]
+source = "config/claude/commands"
+target = "~/.claude/commands"
+labels = ["ai"]
+
+[[claude]]
+source = "config/claude/rules"
+target = "~/.claude/rules"
+labels = ["ai"]
+
+[[claude]]
+source = "config/claude/skills"
+target = "~/.claude/skills"
+labels = ["ai"]
+
 [kitty]
 target = "~/.config/kitty"
 labels = ["macos", "cli"]

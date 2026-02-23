@@ -53,12 +53,8 @@ tiling.setSplitKey("space")
 
 --Quick Access Terminal
 hs.hotkey.bind({"cmd", "shift"}, "space", function()
-  hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal"}):start()
+  hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal", os.getenv("HOME")}):start()
 end)
-
--- hs.hotkey.bind({"cmd", "shift"}, "space", function()
---   hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal", "quick-access-clipboard"}):start()
--- end)
 
 
 -- Window Focus

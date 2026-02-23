@@ -52,7 +52,7 @@ Configurations are symlinked from this repository to system locations. `home.tom
 | `home discard` | Discard all local changes and untracked files |
 | `home update` | Pull, run `mise install`, update Homebrew, and reload fish |
 
-All commands support `--dryrun` to print actions without executing them.
+All commands support `--dry-run` to print actions without executing them.
 
 #### home.toml
 

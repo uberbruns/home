@@ -53,13 +53,13 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Home configuration management tool")
     parser.add_argument("command", choices=COMMANDS, help="command to execute")
-    parser.add_argument("--dryrun", action="store_true",
+    parser.add_argument("--dry-run", action="store_true",
                         help="print actions without executing them")
     args = parser.parse_args()
 
     # Initialize configuration
     config = Config()
-    config.dryrun = args.dryrun
+    config.dryrun = args.dry_run
 
     # Dispatch command
     try:

@@ -6,7 +6,6 @@ Escape exits; returning from a sub-picker loops back to home.
 """
 
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -22,14 +21,13 @@ from safari_bookmarks import extract_bookmarks, filter_bookmarks, load_plist
 
 LINE_WIDTH = 84
 MAX_DETAILS_WIDTH = 40
-MAX_PATH_DEPTH = 5
 
 FZF_ARGS = [
     "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll",
     "--color=16",
     "--color=prompt:15,bg+:0,fg+:15:regular,hl:regular,hl+:regular,gutter:0,pointer:15",
     "--pointer=▌", "--no-scrollbar",
-    "--delimiter=\t", "--nth=1", "--with-nth=2", "-i",
+    "--delimiter=\t", "--nth=1", "--with-nth=2", "--ignore-case",
     "--bind", "enter:accept",
 ]
 
@@ -42,7 +40,7 @@ SUBCOMMANDS = [
 
 TOOLS = [
     # (name, noun, description, command)
-    ("Astroterm", "sky stars", "Night sky over Hamburg", "astroterm -cuq --city=Hamburg"),
+    ("Astroterm", "sky stars", "Night sky over Hamburg", "astroterm --color --unicode --quit-on-any --city=Hamburg"),
     ("Calculator", "calculator", "Math expressions via qalc", "qalc"),
     ("Editor", "editor", "Terminal editor via fresh", "fresh"),
     ("File Browser", "files", "Navigate filesystem via yazi", "yazi"),
@@ -101,7 +99,7 @@ def build_repository_index():
     """Build index rows from git repositories under ~/Development."""
     dev_dir = os.path.expanduser("~/Development")
     result = subprocess.run(
-        ["list-repositories", "-t", dev_dir],
+        ["list-repositories", "--tab", dev_dir],
         text=True, capture_output=True,
     )
     if result.returncode != 0:
@@ -113,29 +111,24 @@ def build_repository_index():
         absolute_path = os.path.join(dev_dir, relative_parent, repo_name)
         display = format_row("[Dev]", "33", repo_name, relative_parent)
         search_key = f"{repo_name} {relative_parent}"
-        lines.append(f"{search_key}\t{display}\topen -a ghostty {absolute_path}")
+        lines.append(f"{search_key}\t{display}\topen --application ghostty {absolute_path}")
     return lines
 
 
 def build_app_index():
     """Build index rows from macOS apps found via Spotlight."""
+    cache_path = os.path.expanduser("~/.home/cache/applications.txt")
     result = subprocess.run(
-        ["mdfind", 'kMDItemContentType == "com.apple.application-bundle"'],
+        ["list-applications", "--absolute", "--tab", "--cache", cache_path, "--async-update"],
         text=True, capture_output=True,
     )
-    depth_pattern = re.compile(r"^(/[^/]+){1," + str(MAX_PATH_DEPTH) + r"}$")
-    nested_pattern = re.compile(r"/[^/]*\.[^/]*/.*\.app$")
+    if result.returncode != 0:
+        return []
 
     lines = []
-    for app_path in sorted(result.stdout.splitlines()):
-        if not depth_pattern.match(app_path):
-            continue
-        if nested_pattern.search(app_path):
-            continue
-
-        app_dir = app_path.rsplit("/", 1)[0]
-        app_name = app_path.rsplit("/", 1)[1].removesuffix(".app")
-
+    for line in result.stdout.splitlines():
+        app_name, app_dir = line.split("\t", 1)
+        app_path = f"{app_dir}/{app_name}.app"
         display = format_row("[App]", "35", app_name, app_dir)
         lines.append(f"{app_path}\t{display}\topen '{app_path}'")
     return lines

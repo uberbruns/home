@@ -10,8 +10,12 @@ Apply each item systematically.
 ### Refactoring
 
 - [ ] Extract non-trivial repeated code into dedicated functions
-- [ ] Extract pure supporting logic into utility functions
-- [ ] Methods access state via properties, not redundant arguments
+- [ ] Extract pure supporting logic into utility functions separated from the hosting object
+- [ ] Prefer small composable objects with a single responsibility over larger objects with unclear scope
+- [ ] Avoid conditional logic when the passed-in data is statically known and can be adapted to eliminate unnecessary branching.
+- [ ] Pass static context object along the call chain instead of re-fetching data that was already available earlier.
+- [ ] Prefer computed properties over caching and recomputation when properties are pure.
+- [ ] Object methods should access state via properties, not through redundant arguments
 - [ ] Restrict access levels to the minimum required visibility
 
 ### Function Body
@@ -36,6 +40,8 @@ Apply each item systematically.
 - [ ] **Object pattern** - `<adjective>?` + `<noun>` (e.g. `User`, `CachedTokenProvider`)
 - [ ] **Function pattern** - `<verb>` + `<adjective>?` + `<noun>` + `<context>?` (e.g. `fetchActiveUsers`, `validateInputFormat`, `buildNavigationStack`)
 - [ ] **State pattern** - `<gerund/noun>` + `<verb (past-tense)>` + `<context>?` (e.g. `loadingFinished`, `connectionEstablished`, `dataSynchronized`)
+- [ ] **Boolean pattern** - `is` or `are` + `<adjective>?` + `<noun>` OR `<verb (3rd person present)>` + `<noun>` (e.g. `isLoading`, `isActive`, `areItemsAvailable`, `contains`, `hasItems`, `exists`)
+- [ ] **Language conventions** - Adhere to language naming standards and idioms
 
 ### File Structure
 
@@ -45,11 +51,11 @@ Apply each item systematically.
 
 - [ ] Properties
 - [ ] Lifecycle (init, setup, teardown)
-- [ ] Entry points (public API, command handlers)
+- [ ] Entry points (public API, handlers)
 - [ ] Implementation details (core logic, grouped by context/data structure operated on)
 - [ ] Supporting code (helpers, utilities, formatters, validators)
 - [ ] Alphabetical order within each section for equal-level symbols
 
 ### Section Separators
 
-- [ ] Separate logical sections with ASCII art comment separators matching language conventions
+- [ ] Separate logical sections in the file structure and implementation with markers or ASCII art comments matching language conventions
