@@ -14,6 +14,7 @@ from home import (
     Config,
     execute_discard,
     execute_install,
+    execute_link,
     execute_pull,
     execute_push,
     execute_update,
@@ -28,6 +29,7 @@ from home.output import print_error, print_info
 COMMANDS = {
     "discard": execute_discard,
     "install": execute_install,
+    "link":    execute_link,
     "pull":    execute_pull,
     "push":    execute_push,
     "update":  execute_update,
@@ -42,7 +44,8 @@ def main():
     """Parse arguments and dispatch the requested command.
 
     Commands:
-      install  - Create symlinks from home.toml (filtered by labels in config.toml)
+      install  - Link dotfiles, install mise tools, and reload Hammerspoon
+      link     - Create symlinks from home.toml (filtered by labels in config.toml)
       push     - Commit and push all changes with AI-generated commit message
       pull     - Fetch and pull latest changes (requires clean working tree)
       discard  - Discard all local changes and untracked files

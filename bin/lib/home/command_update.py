@@ -8,6 +8,7 @@ import os
 import subprocess
 from pathlib import Path
 
+from .command_install import execute_install
 from .command_pull import execute_pull
 from .config import Config
 from .output import print_header, print_success, print_warning
@@ -18,16 +19,10 @@ from .output import print_header, print_success, print_warning
 # ============================================================
 
 def execute_update(config: Config) -> None:
-    """Pull changes, update development tools, and reload shell."""
-    # Pull latest changes from remote
+    """Pull changes, install dotfiles and tools, and update Homebrew."""
     execute_pull(config)
-
-    # Update development tools
-    install_mise_tools()
+    execute_install(config)
     update_homebrew_packages()
-
-    # Reload shell
-    reload_fish_shell()
 
 
 # ============================================================
@@ -69,32 +64,3 @@ def update_homebrew_packages() -> None:
         # Handle any errors during update
         print_warning("Skipping Homebrew update")
 
-
-# ============================================================
-# Mise Updates
-# ============================================================
-
-def install_mise_tools() -> None:
-    """Install and update mise-managed tools."""
-    print_header("Installing tools")
-
-    # Trust mise configuration files
-    subprocess.run(['mise', 'trust', '--yes', '--silent', '--all'], check=True)
-
-    # Install tools defined in mise configuration
-    subprocess.run(['mise', 'install'], check=True)
-
-    # Print success message
-    print_success("mise install complete")
-
-
-# ============================================================
-# Shell Reload
-# ============================================================
-
-def reload_fish_shell() -> None:
-    """Reload fish shell with login configuration."""
-    print_header("Reloading fish shell")
-
-    # Execute fish shell with login flag
-    os.execvp('fish', ['fish', '-l'])
