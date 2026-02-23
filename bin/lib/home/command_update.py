@@ -1,4 +1,4 @@
-"""Update command implementation."""
+"""Update command — pull changes, install configuration, and update packages."""
 
 # ============================================================
 # Imports
@@ -19,48 +19,55 @@ from .output import print_header, print_success, print_warning
 # ============================================================
 
 def execute_update(config: Config) -> None:
-    """Pull changes, install dotfiles and tools, and update Homebrew."""
+    """
+    Full system update.
+
+    Steps:
+    1. Pull latest changes from remote
+    2. Install dotfiles, tools, and reload services
+    3. Update Homebrew packages
+    """
     execute_pull(config)
     execute_install(config)
     update_homebrew_packages()
 
 
 # ============================================================
-# Homebrew Updates
+# Homebrew
 # ============================================================
 
 def update_homebrew_packages() -> None:
-    """Update Homebrew packages if owned by current user."""
+    """Update Homebrew packages if the installation is owned by the current user."""
     print_header("Updating Homebrew")
 
     # Locate Homebrew installation directory
-    homebrew_dir = None
-    if Path('/opt/homebrew').exists():
-        homebrew_dir = Path('/opt/homebrew')
-    elif Path('/usr/local/Homebrew').exists():
-        homebrew_dir = Path('/usr/local/Homebrew')
-
+    homebrew_dir = find_homebrew_directory()
     if not homebrew_dir:
         return
 
-    # Update Homebrew if owned by current user
+    # Verify ownership before modifying packages
     try:
-        # Check directory ownership
-        homebrew_owner = homebrew_dir.owner()
         current_user = os.getlogin()
-
-        if homebrew_owner == current_user:
-            # Execute Homebrew update commands
-            subprocess.run(['brew', 'update'], check=True)
-            subprocess.run(['brew', 'upgrade'], check=True)
-            subprocess.run(['brew', 'cleanup'], check=True)
-
-            # Print success message
-            print_success("Homebrew update complete")
-        else:
-            # Print warning for non-owned directory
-            print_warning(f"Skipping Homebrew update (directory not owned by {current_user})")
+        homebrew_owner = homebrew_dir.owner()
     except Exception:
-        # Handle any errors during update
         print_warning("Skipping Homebrew update")
+        return
 
+    if homebrew_owner != current_user:
+        print_warning(f"Skipping Homebrew update (directory not owned by {current_user})")
+        return
+
+    # Update, upgrade, and clean up
+    subprocess.run(['brew', 'update'], check=True)
+    subprocess.run(['brew', 'upgrade'], check=True)
+    subprocess.run(['brew', 'cleanup'], check=True)
+
+    print_success("Homebrew update complete")
+
+
+def find_homebrew_directory() -> Path | None:
+    """Return the Homebrew installation path, or None if not found."""
+    for candidate in [Path('/opt/homebrew'), Path('/usr/local/Homebrew')]:
+        if candidate.exists():
+            return candidate
+    return None

@@ -1,4 +1,4 @@
-"""Install command implementation."""
+"""Install command — link dotfiles, install tools, and reload services."""
 
 # ============================================================
 # Imports
@@ -16,7 +16,15 @@ from .output import print_header, print_success, print_warning
 # ============================================================
 
 def execute_install(config: Config) -> None:
-    """Link dotfiles, install mise tools, reload Hammerspoon, and reload shell."""
+    """
+    Install the home configuration.
+
+    Steps:
+    1. Link dotfiles from home.toml
+    2. Install mise-managed tools
+    3. Reload Hammerspoon configuration
+    4. Reload fish shell
+    """
     execute_link(config)
     install_mise_tools()
     reload_hammerspoon()
@@ -24,11 +32,31 @@ def execute_install(config: Config) -> None:
 
 
 # ============================================================
-# Hammerspoon Reload
+# Tools
 # ============================================================
 
+def install_mise_tools() -> None:
+    """Trust and install mise-managed tools."""
+    print_header("Installing tools")
+
+    subprocess.run(['mise', 'trust', '--yes', '--silent', '--all'], check=True)
+    subprocess.run(['mise', 'install'], check=True)
+
+    print_success("mise install complete")
+
+
+# ============================================================
+# Service Reloads
+# ============================================================
+
+def reload_fish_shell() -> None:
+    """Spawn a login fish shell to pick up configuration changes."""
+    print_header("Reloading fish shell")
+    subprocess.run(['fish', '-l'], check=True)
+
+
 def reload_hammerspoon() -> None:
-    """Reload Hammerspoon configuration."""
+    """Reload Hammerspoon configuration via IPC."""
     print_header("Reloading Hammerspoon")
 
     try:
@@ -38,31 +66,3 @@ def reload_hammerspoon() -> None:
         print_warning("Skipping Hammerspoon reload (hs not found)")
     except subprocess.CalledProcessError:
         print_warning("Skipping Hammerspoon reload (command failed)")
-
-
-# ============================================================
-# Mise Tools
-# ============================================================
-
-def install_mise_tools() -> None:
-    """Install and update mise-managed tools."""
-    print_header("Installing tools")
-
-    # Trust mise configuration files
-    subprocess.run(['mise', 'trust', '--yes', '--silent', '--all'], check=True)
-
-    # Install tools defined in mise configuration
-    subprocess.run(['mise', 'install'], check=True)
-
-    print_success("mise install complete")
-
-
-# ============================================================
-# Shell Reload
-# ============================================================
-
-def reload_fish_shell() -> None:
-    """Reload fish shell with login configuration."""
-    print_header("Reloading fish shell")
-
-    subprocess.run(['fish', '-l'], check=True)
