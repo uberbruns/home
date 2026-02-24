@@ -1,5 +1,2 @@
 [tools]
 gh = "latest"
-python = "latest"
-uv = "latest"
-"npm:@fresh-editor/fresh-editor" = "latest"

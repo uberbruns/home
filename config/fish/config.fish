@@ -4,9 +4,10 @@
 
 test -d ~/.rd/bin && fish_add_path ~/.rd/bin
 fish_add_path ~/.home/cache/npm-global/bin
+fish_add_path ~/.home/cache/uv-bin
 fish_add_path ~/.local/bin
 fish_add_path /opt/homebrew/bin
-fish_add_path ~/.home/bin
+
 
 
 #==================================================

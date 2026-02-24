@@ -4,6 +4,7 @@
 # Imports
 # ============================================================
 
+import os
 import shutil
 import subprocess
 
@@ -28,6 +29,7 @@ def execute_install(config: Config) -> None:
     """
     execute_link(config)
     install_mise_tools()
+    install_home_scripts()
     reload_hammerspoon()
     reload_fish_shell()
 
@@ -44,6 +46,16 @@ def install_mise_tools() -> None:
     subprocess.run(['mise', 'install'], check=True)
 
     print_success("mise install complete")
+
+
+def install_home_scripts() -> None:
+    """Install home-bin scripts as uv tools."""
+    print_header("Installing scripts")
+
+    bin_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+    subprocess.run(['uv', 'tool', 'install', '--editable', bin_dir], check=True)
+
+    print_success("uv tool install complete")
 
 
 # ============================================================

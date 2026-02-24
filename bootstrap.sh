@@ -1,31 +1,39 @@
 #!/bin/bash
+# Bootstrap a fresh machine: install the package manager, system packages,
+# CLI scripts, and dotfile links.
+
+set -euo pipefail  # -e: exit on error, -u: error on unset variables, -o pipefail: propagate pipe failures
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-bootstrap_macos() {
+# ===========================================================================
+# Platform Packages
+# ===========================================================================
+
+install_packages_macos() {
     if ! command -v brew &>/dev/null; then
         echo "Installing Homebrew..."
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    else
-        echo "Homebrew already installed"
     fi
 
-    cat "$SCRIPT_DIR/brewfile-macos" | $SHELL -i -c "brew bundle --file=-"
+    $SHELL -i -c "brew bundle --file=$SCRIPT_DIR/brewfile-macos"
 }
 
-bootstrap_linux() {
+install_packages_linux() {
     echo "Linux bootstrap not yet implemented"
 }
 
-OS="$(uname)"
+# ===========================================================================
+# Main
+# ===========================================================================
 
-if [[ "$OS" == "Darwin" ]]; then
-    bootstrap_macos
-elif [[ "$OS" == "Linux" ]]; then
-    bootstrap_linux
-fi
+case "$(uname)" in
+    Darwin) install_packages_macos ;;
+    Linux)  install_packages_linux ;;
+esac
 
-# Create cache directory
 mkdir -p ~/.cache
-
-~/.home/bin/home.py update
+mise trust --yes --silent --all
+mise install
+mise exec -- uv tool install --editable --force ~/.home/bin
+~/.home/bin/home_cli.py update

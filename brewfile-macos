@@ -1,4 +1,3 @@
-brew "dasel"
 brew "fish"
 brew "mise"
 brew "starship"
