@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Text casing picker using fzf.
 
-Reads text from the clipboard, presents all casing variants via fzf,
-and copies the selected variant to the clipboard. Exits 0 on selection,
-1 on escape or empty clipboard.
+Reads the current text selection via Hammerspoon IPC, presents all casing
+variants via fzf, and replaces the selection with the chosen variant.
+Exits 0 on selection, 1 on escape or empty selection.
 """
 
+import json
 import subprocess
 import sys
 
@@ -30,11 +31,29 @@ FZF_ARGS = [
 # Implementation
 # --------------------------------------------------------------------------- #
 
-def read_clipboard():
-    """Return the current clipboard contents as a string, or None if empty."""
-    result = subprocess.run(["pbpaste"], text=True, capture_output=True)
-    text = result.stdout.strip()
-    return text if text else None
+def show_alert(message):
+    """Show a brief alert via Hammerspoon."""
+    subprocess.run(["hs", "-c", f"hs.alert.show({message!r})"], capture_output=True)
+
+
+def read_selection():
+    """Return the selection captured by Hammerspoon at picker launch, or None."""
+    result = subprocess.run(["hs", "-c", "return ipcGetCapturedSelection()"], text=True, capture_output=True)
+    # hs CLI output may include extension-loading lines ("--").
+    # Scan from the end to find the first line that parses as valid JSON.
+    for line in reversed(result.stdout.splitlines()):
+        try:
+            data = json.loads(line)
+            return data[0] if isinstance(data, list) else data
+        except (json.JSONDecodeError, IndexError, TypeError):
+            continue
+    return None
+
+
+def replace_selection(text):
+    """Queue a replacement to be applied by Hammerspoon when the picker closes."""
+    json_text = json.dumps([text])
+    subprocess.run(["hs", "-c", f"ipcQueueReplacement([==[{json_text}]==])"], capture_output=True)
 
 
 def format_row(variant, name):
@@ -80,18 +99,14 @@ def pick_variant(index):
     return result.stdout.strip().split("\t")[2]
 
 
-def copy_to_clipboard(text):
-    """Copy text to the system clipboard via pbcopy."""
-    subprocess.run(["pbcopy"], input=text, text=True)
-
-
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
 
 def main():
-    text = read_clipboard()
+    text = read_selection()
     if not text:
+        show_alert("No text selected")
         sys.exit(1)
 
     index = build_index(text)
@@ -102,7 +117,7 @@ def main():
     if not variant:
         sys.exit(1)
 
-    copy_to_clipboard(variant)
+    replace_selection(variant)
 
 
 if __name__ == "__main__":

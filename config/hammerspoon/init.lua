@@ -22,6 +22,7 @@ local tiling = require("tiling")
 require("bookmarks")
 require("hyperkey")
 require("kitten")
+require("selection")
 
 -- Tiling
 tiling.registerApp("ad", "com.seriflabs.affinitydesigner2")
@@ -51,9 +52,12 @@ tiling.registerApp("w", "com.apple.Safari")
 tiling.registerApp("x", "com.apple.dt.Xcode")
 tiling.setSplitKey("space")
 
---Quick Access Terminal
+-- Quick Access Terminal
 hs.hotkey.bind({"cmd", "shift"}, "space", function()
-  hs.task.new("/opt/homebrew/bin/kitten", nil, {"quick-access-terminal", os.getenv("HOME")}):start()
+  captureSelectionForPicker()
+  hs.task.new("/opt/homebrew/bin/kitten", function()
+    applyQueuedReplacement()
+  end, {"quick-access-terminal", os.getenv("HOME")}):start()
 end)
 
 

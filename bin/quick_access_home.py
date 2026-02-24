@@ -39,8 +39,8 @@ SUBCOMMANDS = [
 
 TEXT_TOOLS = [
     # (name, noun, description, command)
-    ("Shuffle Lines", "shuffle lines text", "Shuffle clipboard lines and copy result", "pbpaste | transform-text shuffle | pbcopy"),
-    ("Sort Lines", "sort lines text", "Sort clipboard lines and copy result", "pbpaste | transform-text sort -i | pbcopy"),
+    ("Shuffle Lines", "shuffle lines text", "Shuffle selected lines", "quick-transform-lines shuffle"),
+    ("Sort Lines", "sort lines text", "Sort selected lines", "quick-transform-lines sort"),
     ("Text Casings", "text casing transform", "Convert clipboard text to a casing variant", "quick-access-text"),
 ]
 
