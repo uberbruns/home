@@ -104,7 +104,7 @@ end
 --------------------------------------------------
 
 -- Global to prevent garbage collection after require() returns.
-kittenWatcher = hs.application.watcher.new(function(appName, eventType)
+KittenWatcher = hs.application.watcher.new(function(appName, eventType)
   if eventType == hs.application.watcher.activated then
     if appName == APP_NAME then
       showBackdrop()
@@ -122,4 +122,4 @@ kittenWatcher = hs.application.watcher.new(function(appName, eventType)
   end
 end)
 
-kittenWatcher:start()
+KittenWatcher:start()

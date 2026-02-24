@@ -2,11 +2,11 @@
   Text selection capture and deferred replacement for the quick-access picker.
 
   Flow:
-  1. Hotkey fires → captureSelectionForPicker() reads the active selection
+  1. Hotkey fires → CaptureSelectionForPicker() reads the active selection
   2. Picker opens (kitty-quick-access)
-  3. Picker calls ipcGetCapturedSelection() via hs CLI to read the stored text
-  4. Picker calls ipcQueueReplacement(text) to register the chosen replacement
-  5. Picker closes → applyQueuedReplacement() pastes the replacement into the
+  3. Picker calls IpcGetCapturedSelection() via hs CLI to read the stored text
+  4. Picker calls IpcQueueReplacement(text) to register the chosen replacement
+  5. Picker closes → ApplyQueuedReplacement() pastes the replacement into the
      original app once it regains focus
 
   Glossary:
@@ -25,7 +25,6 @@ local FOCUS_RESTORE_DELAY_S = 0.15   -- seconds to wait for original app to rega
 -- State
 --------------------------------------------------
 
--- Globals (not local) to survive garbage collection after require() returns.
 local capturedSelection = nil
 local queuedReplacement = nil
 
@@ -96,14 +95,14 @@ end
 --------------------------------------------------
 
 -- Captures the active selection before the picker opens. Resets any pending replacement.
-function captureSelectionForPicker()
+function CaptureSelectionForPicker()
   capturedSelection = readCurrentSelection()
   queuedReplacement = nil
 end
 
 -- Applies the queued replacement once the picker closes and the original app regains focus.
 -- No-op if no replacement was queued.
-function applyQueuedReplacement()
+function ApplyQueuedReplacement()
   if not queuedReplacement then return end
 
   local replacement = queuedReplacement
@@ -122,12 +121,12 @@ end
 --------------------------------------------------
 
 --- Returns the selection captured at picker launch as a JSON array, or "null".
-function ipcGetCapturedSelection()
+function IpcGetCapturedSelection()
   if capturedSelection == nil then return "null" end
   return hs.json.encode({capturedSelection})
 end
 
 --- Queues text to be inserted when the picker closes. Accepts a JSON array.
-function ipcQueueReplacement(jsonText)
+function IpcQueueReplacement(jsonText)
   queuedReplacement = hs.json.decode(jsonText)[1]
 end

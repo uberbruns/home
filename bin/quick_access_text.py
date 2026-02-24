@@ -38,7 +38,7 @@ def show_alert(message):
 
 def read_selection():
     """Return the selection captured by Hammerspoon at picker launch, or None."""
-    result = subprocess.run(["hs", "-c", "return ipcGetCapturedSelection()"], text=True, capture_output=True)
+    result = subprocess.run(["hs", "-c", "return IpcGetCapturedSelection()"], text=True, capture_output=True)
     # hs CLI output may include extension-loading lines ("--").
     # Scan from the end to find the first line that parses as valid JSON.
     for line in reversed(result.stdout.splitlines()):
@@ -53,7 +53,7 @@ def read_selection():
 def replace_selection(text):
     """Queue a replacement to be applied by Hammerspoon when the picker closes."""
     json_text = json.dumps([text])
-    subprocess.run(["hs", "-c", f"ipcQueueReplacement([==[{json_text}]==])"], capture_output=True)
+    subprocess.run(["hs", "-c", f"IpcQueueReplacement([==[{json_text}]==])"], capture_output=True)
 
 
 def format_row(variant, name):

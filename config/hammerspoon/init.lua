@@ -48,9 +48,9 @@ workspace.setSplitKey("space")
 
 -- Quick Access Terminal
 hs.hotkey.bind({"cmd"}, "space", function()
-  captureSelectionForPicker()
+  CaptureSelectionForPicker()
   hs.task.new("/opt/homebrew/bin/kitten", function()
-    applyQueuedReplacement()
+    ApplyQueuedReplacement()
   end, {"quick-access-terminal", os.getenv("HOME")}):start()
 end)
 

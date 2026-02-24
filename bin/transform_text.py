@@ -45,7 +45,7 @@ def read_text(source):
         return result.stdout
     if source == "hammerspoon":
         result = subprocess.run(
-            ["hs", "-c", "return ipcGetCapturedSelection()"],
+            ["hs", "-c", "return IpcGetCapturedSelection()"],
             text=True, capture_output=True,
         )
         for line in reversed(result.stdout.splitlines()):
@@ -68,7 +68,7 @@ def write_text(text, dest):
     if dest == "hammerspoon":
         json_text = json.dumps([text])
         subprocess.run(
-            ["hs", "-c", f"ipcQueueReplacement([==[{json_text}]==])"],
+            ["hs", "-c", f"IpcQueueReplacement([==[{json_text}]==])"],
             capture_output=True,
         )
 
