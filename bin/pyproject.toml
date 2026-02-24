@@ -14,7 +14,6 @@ quick-access-clipboard = "quick_access_clipboard:main"
 quick-access-emojis = "quick_access_emojis:main"
 quick-access-home = "quick_access_home:main"
 quick-access-text = "quick_access_text:main"
-quick-transform-lines = "quick_transform_lines:main"
 transform-text = "transform_text:main"
 
 [build-system]

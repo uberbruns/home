@@ -10,7 +10,7 @@ keybind = alt+left=unbind
 keybind = alt+right=unbind
 keybind = all:alt+shift+left=unbind
 keybind = all:alt+shift+right=unbind
-keybind = alt+backspace=unbind
+keybind = alt+backspace=text:\x1b\x7f
 keybind = alt+delete=unbind
 
 keybind = super+left=unbind

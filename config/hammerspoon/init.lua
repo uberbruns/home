@@ -53,7 +53,7 @@ tiling.registerApp("x", "com.apple.dt.Xcode")
 tiling.setSplitKey("space")
 
 -- Quick Access Terminal
-hs.hotkey.bind({"cmd", "shift"}, "space", function()
+hs.hotkey.bind({"cmd"}, "space", function()
   captureSelectionForPicker()
   hs.task.new("/opt/homebrew/bin/kitten", function()
     applyQueuedReplacement()

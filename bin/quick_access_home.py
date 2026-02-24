@@ -39,8 +39,8 @@ SUBCOMMANDS = [
 
 TEXT_TOOLS = [
     # (name, noun, description, command)
-    ("Shuffle Lines", "shuffle lines text", "Shuffle selected lines", "quick-transform-lines shuffle"),
-    ("Sort Lines", "sort lines text", "Sort selected lines", "quick-transform-lines sort"),
+    ("Shuffle Lines", "shuffle lines text", "Shuffle selected lines", "transform-text --from hammerspoon --to hammerspoon shuffle"),
+    ("Sort Lines", "sort lines text", "Sort selected lines", "transform-text --from hammerspoon --to hammerspoon sort"),
     ("Text Casings", "text casing transform", "Convert clipboard text to a casing variant", "quick-access-text"),
 ]
 
