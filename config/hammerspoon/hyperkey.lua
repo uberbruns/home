@@ -1,65 +1,66 @@
+-- Tracks hyper key (cmd+alt+ctrl+shift) held state via polling,
+-- notifying registered callbacks on release.
+
 local M = {}
 
-local hyperDown = false
-local timer = nil
-local onReleaseCallbacks = {}
+--------------------------------------------------
+-- State
+--------------------------------------------------
 
-local function isHyper()
+local isDown = false
+local releaseCallbacks = {}
+local pollTimer = nil
+
+--------------------------------------------------
+-- Implementation
+--------------------------------------------------
+
+local function isHyperPressed()
   local flags = hs.eventtap.checkKeyboardModifiers()
-  return flags.cmd and flags.shift and flags.alt and flags.ctrl
+  return flags.alt and flags.cmd and flags.ctrl and flags.shift
 end
 
-local function pollHyperState()
-  if isHyper() then
-    if not hyperDown then
-      hyperDown = true
-      print("hyperkey DOWN")
-    end
-  else
-    if hyperDown then
-      hyperDown = false
-      print("hyperkey UP")
-      for _, cb in ipairs(onReleaseCallbacks) do
-        cb()
-      end
-    end
-    if timer then
-      timer:stop()
-      timer = nil
-    end
+-- Invokes all registered release callbacks and resets held state.
+local function notifyRelease()
+  isDown = false
+  for _, callback in ipairs(releaseCallbacks) do
+    callback()
   end
 end
 
-local function startPolling()
-  if timer then return end
-  timer = hs.timer.doEvery(1/30, pollHyperState)
+local function stopPolling()
+  if not pollTimer then return end
+  pollTimer:stop()
+  pollTimer = nil
+end
+
+local function pollHyperState()
+  if isHyperPressed() then
+    isDown = true
+  else
+    if isDown then notifyRelease() end
+    stopPolling()
+  end
+end
+
+--------------------------------------------------
+-- Public API
+--------------------------------------------------
+
+--- Registers a callback invoked when the hyper key is released.
+function M.onRelease(callback)
+  table.insert(releaseCallbacks, callback)
+end
+
+--- Begins polling modifier state at 30 Hz with a 5-second safety timeout.
+function M.startPolling()
+  if pollTimer then return end
+  pollTimer = hs.timer.doEvery(1/30, pollHyperState)
   hs.timer.doAfter(5, function()
-    if timer then
-      timer:stop()
-      timer = nil
-      if hyperDown then
-        hyperDown = false
-        print("hyperkey UP (timeout)")
-        for _, cb in ipairs(onReleaseCallbacks) do
-          cb()
-        end
-      end
-    end
+    if not pollTimer then return end
+    stopPolling()
+    if isDown then notifyRelease() end
   end)
 end
-
-function M.isDown()
-  return hyperDown
-end
-
-function M.onRelease(callback)
-  table.insert(onReleaseCallbacks, callback)
-end
-
-function M.startPolling()
-  startPolling()
-end
-
-startPolling()
 
 return M

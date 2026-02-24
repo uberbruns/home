@@ -9,11 +9,6 @@
   5. Picker closes → applyQueuedReplacement() pastes the replacement into the
      original app once it regains focus
 
-  ipcGetCapturedSelection, ipcQueueReplacement, captureSelectionForPicker, and
-  applyQueuedReplacement are globals (not locals) so they remain reachable after
-  require() returns. Local variables are garbage collected once the module chunk
-  finishes executing, silently making them unreachable.
-
   Glossary:
   - element: focused AXUIElement (text field, editor, etc.)
   - range:   NSRange table { location = <int>, length = <int> }
@@ -30,6 +25,7 @@ local FOCUS_RESTORE_DELAY_S = 0.15   -- seconds to wait for original app to rega
 -- State
 --------------------------------------------------
 
+-- Globals (not local) to survive garbage collection after require() returns.
 local capturedSelection = nil
 local queuedReplacement = nil
 

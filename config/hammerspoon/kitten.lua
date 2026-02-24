@@ -1,10 +1,5 @@
---[[
-  Kitty Quick-Access Backdrop
-
-  Draws a dark overlay behind the kitty-quick-access window with a
-  purple border when the app is activated. Both are removed on
-  deactivation or termination.
-]]
+-- Draws a dark overlay and purple border behind the kitty-quick-access
+-- window on activation. Both are removed on deactivation or termination.
 
 --------------------------------------------------
 -- Configuration
@@ -21,8 +16,8 @@ local OVERLAY_COLOR = { black = true, alpha = 0.8 }
 -- State
 --------------------------------------------------
 
-local isBackdropVisible = false
 local borderCanvas = nil
+local isBackdropVisible = false
 local overlayCanvas = nil
 
 --------------------------------------------------
@@ -80,7 +75,6 @@ local function showBackdrop()
   if isBackdropVisible then return end
   isBackdropVisible = true
 
-  -- Overlay
   overlayCanvas = createOverlayCanvas()
 
   -- Border around kitty window
@@ -109,27 +103,23 @@ end
 -- Application Watcher
 --------------------------------------------------
 
--- Global (not local) to prevent Lua garbage collection after require() returns.
--- A local variable would be collected once the module chunk finishes executing,
--- silently stopping all watcher callbacks.
+-- Global to prevent garbage collection after require() returns.
 kittenWatcher = hs.application.watcher.new(function(appName, eventType)
-  hs.printf("[kitten] event=%s appName=%s", tostring(eventType), tostring(appName))
-
   if eventType == hs.application.watcher.activated then
     if appName == APP_NAME then
-      hs.printf("[kitten] → showBackdrop")
       showBackdrop()
     elseif isBackdropVisible then
-      hs.printf("[kitten] → hideBackdrop (other app activated)")
       hideBackdrop()
     end
-  elseif appName == APP_NAME
-      and (eventType == hs.application.watcher.deactivated
-        or eventType == hs.application.watcher.terminated) then
-    hs.printf("[kitten] → hideBackdrop (deactivated/terminated)")
+    return
+  end
+
+  if appName ~= APP_NAME then return end
+
+  if eventType == hs.application.watcher.deactivated
+      or eventType == hs.application.watcher.terminated then
     hideBackdrop()
   end
 end)
 
-local ok = kittenWatcher:start()
-hs.printf("[kitten] watcher started: %s", tostring(ok ~= nil))
+kittenWatcher:start()
