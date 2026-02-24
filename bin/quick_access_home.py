@@ -37,6 +37,11 @@ SUBCOMMANDS = [
     ("Emoji Picker", "emoji", "Search and copy emoji to clipboard", "quick-access-emojis"),
 ]
 
+TEXT_TOOLS = [
+    # (name, noun, description, command)
+    ("Text Casings", "text casing transform", "Convert clipboard text to a casing variant", "quick-access-text"),
+]
+
 TOOLS = [
     # (name, noun, description, command)
     ("Astroterm", "sky stars", "Night sky over Hamburg", "astroterm --color --unicode --quit-on-any --city=Hamburg"),
@@ -54,6 +59,11 @@ TOOLS = [
 def build_subcommand_index():
     """Build index rows from quick-access subcommands."""
     return _build_command_index(SUBCOMMANDS, "  ⮑  ", "35")
+
+
+def build_text_tool_index():
+    """Build index rows from text transformation tools."""
+    return _build_command_index(TEXT_TOOLS, "[TXT]", "36")
 
 
 def build_tool_index():
@@ -135,7 +145,7 @@ def build_app_index():
 
 def build_index():
     """Aggregate all index sources."""
-    return "\n".join(build_subcommand_index() + build_tool_index() + build_bookmark_index() + build_repository_index() + build_app_index())
+    return "\n".join(build_subcommand_index() + build_text_tool_index() + build_tool_index() + build_bookmark_index() + build_repository_index() + build_app_index())
 
 
 # --------------------------------------------------------------------------- #

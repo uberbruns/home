@@ -2,6 +2,7 @@
 name = "home-bin"
 version = "0.1.0"
 requires-python = ">=3.11"
+dependencies = ["textcase>=0.4"]
 
 [project.scripts]
 home = "home_cli:main"
@@ -12,6 +13,8 @@ quick-access-bookmarks = "quick_access_bookmarks:main"
 quick-access-clipboard = "quick_access_clipboard:main"
 quick-access-emojis = "quick_access_emojis:main"
 quick-access-home = "quick_access_home:main"
+quick-access-text = "quick_access_text:main"
+transform-text = "transform_text:main"
 
 [build-system]
 requires = ["hatchling"]

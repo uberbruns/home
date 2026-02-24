@@ -109,18 +109,27 @@ end
 -- Application Watcher
 --------------------------------------------------
 
-local kittenWatcher = hs.application.watcher.new(function(appName, eventType)
+-- Global (not local) to prevent Lua garbage collection after require() returns.
+-- A local variable would be collected once the module chunk finishes executing,
+-- silently stopping all watcher callbacks.
+kittenWatcher = hs.application.watcher.new(function(appName, eventType)
+  hs.printf("[kitten] event=%s appName=%s", tostring(eventType), tostring(appName))
+
   if eventType == hs.application.watcher.activated then
     if appName == APP_NAME then
+      hs.printf("[kitten] → showBackdrop")
       showBackdrop()
     elseif isBackdropVisible then
+      hs.printf("[kitten] → hideBackdrop (other app activated)")
       hideBackdrop()
     end
   elseif appName == APP_NAME
       and (eventType == hs.application.watcher.deactivated
         or eventType == hs.application.watcher.terminated) then
+    hs.printf("[kitten] → hideBackdrop (deactivated/terminated)")
     hideBackdrop()
   end
 end)
 
-kittenWatcher:start()
+local ok = kittenWatcher:start()
+hs.printf("[kitten] watcher started: %s", tostring(ok ~= nil))
