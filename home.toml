@@ -36,6 +36,11 @@ target = "~/.config/mise.toml"
 labels = ["cli"]
 
 [[mise]]
+source = "config/mise/config-macos.toml"
+target = "~/.config/mise.toml"
+labels = ["macos", "cli"]
+
+[[mise]]
 source = "config/mise/ai.toml"
 target = "~/.config/mise/conf.d/ai.toml"
 labels = ["ai"]
