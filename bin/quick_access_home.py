@@ -110,7 +110,7 @@ def build_repository_index():
         absolute_path = os.path.join(dev_dir, relative_parent, repo_name)
         display = format_row("[Dev]", "33", repo_name, relative_parent)
         search_key = f"{repo_name} {relative_parent}"
-        lines.append(f"{search_key}\t{display}\topen --application ghostty {absolute_path}")
+        lines.append(f"{search_key}\t{display}\topen -a ghostty {absolute_path}")
     return lines
 
 

@@ -29,7 +29,19 @@ def execute_update(config: Config) -> None:
     """
     execute_pull(config)
     execute_install(config)
+    upgrade_mise_tools()
     update_homebrew_packages()
+
+
+# ============================================================
+# Mise
+# ============================================================
+
+def upgrade_mise_tools() -> None:
+    """Upgrade all mise-managed tools to their latest versions."""
+    print_header("Upgrading mise tools")
+    subprocess.run(['mise', 'upgrade'], check=True)
+    print_success("mise upgrade complete")
 
 
 # ============================================================

@@ -19,7 +19,6 @@ Apply each item systematically.
         - [ ] Minimize both the number of stateful objects and the amount of state each one manages
     - [ ] Use stateless objects for data modeling and isolated functionality with no meaningful lifecycle
     - [ ] Use enumerations for mutually exclusive state, minimizing the number of representable states
-- [ ] Eliminate conditional logic when the input data is statically known and can be shaped to remove unnecessary branching
 - [ ] Pass a context object along the call chain instead of re-fetching data already available at an earlier stage
 - [ ] Prefer computed properties over cached or recomputed values when the computation is pure
 - [ ] Object methods should access state via properties, not through redundant arguments
@@ -28,6 +27,8 @@ Apply each item systematically.
 ### Function Body
 
 - [ ] Check preconditions first; avoid mid-body returns
+- [ ] Eliminate conditional logic when the input data is statically known and can be shaped to remove unnecessary branching
+- [ ] Conditional logic should handle the expected path first
 - [ ] Add one-line subheader comments describing each block's purpose
 - [ ] Order operations leaf-first, building up to the final root transformation or return value
 - [ ] Alphabetically order sequential accesses to properties of the same object when order is irrelevant
@@ -48,6 +49,7 @@ Apply each item systematically.
 - [ ] **Variables** - Specific, unabbreviated names that communicate purpose without extra context
 - [ ] **Functions** - Name and purpose match and are easy to grasp
 - [ ] **Specificity** - Prefer precise terms over generic ones; derive from symbol/function docs
+- [ ] **Length** - Names should be long enough to be unambiguous and short enough to be scannable; the right name feels obvious in retrospect. Err on the side of too long rather than too short.
 - [ ] **Weight** - Reserve generic verbs (`get`, `set`) for lightweight accessors; use more descriptive verbs (`discover`, `compute`, `load`) for non-trivial operations
 - [ ] **Symmetry** - Similarly purposed functions may share leading terms
 - [ ] **Object pattern** - `<adjective>?` + `<noun>` (e.g. `User`, `CachedTokenProvider`)
