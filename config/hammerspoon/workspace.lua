@@ -136,18 +136,21 @@ local function resolveTargetScreen(tiles)
   return hs.screen.mainScreen()
 end
 
--- Restores focus to the initially focused window if tiled, else first app's main window.
+-- Focuses the first tiled app that differs from the initially focused app.
 local function restoreFocus(initialFocusedWindow, tiledWindows, tiles)
-  if initialFocusedWindow then
-    local initialWindowId = initialFocusedWindow:id()
-    for _, window in ipairs(tiledWindows) do
-      if window:id() == initialWindowId then
-        initialFocusedWindow:focus()
+  local initialBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID()
+
+  for _, tile in ipairs(tiles) do
+    if tile.app:bundleID() ~= initialBundleID then
+      local mainWindow = tile.app:mainWindow()
+      if mainWindow then
+        mainWindow:focus()
         return
       end
     end
   end
 
+  -- Fall back to first tile if all tiles belong to the initially focused app.
   if #tiles > 0 then
     local mainWindow = tiles[1].app:mainWindow()
     if mainWindow then mainWindow:focus() end

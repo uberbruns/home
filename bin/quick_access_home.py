@@ -50,8 +50,17 @@ TOOLS = [
     ("Calculator", "calculator", "Math expressions via qalc", "qalc"),
     ("Editor", "editor", "Terminal editor via fresh", "fresh"),
     ("File Browser", "files", "Navigate filesystem via yazi", "yazi"),
-    ("Shell", "shell terminal fish", "Interactive fish shell", "fish"),
     ("Swift REPL", "repl", "Interactive Swift playground", "swift repl"),
+]
+
+PANEL_ACTIONS = [
+    # (name, noun, description, action)
+    ("Shell", "shell terminal fish", "Interactive fish shell", "fish"),
+    ("Home Install", "home install dotfiles", "Link dotfiles and install tools", "python3 ~/.home/bin/home_cli.py install"),
+    ("Home Push", "home push commit", "Commit and push all changes", "python3 ~/.home/bin/home_cli.py push"),
+    ("Home Update", "home update pull", "Pull changes and update tools", "python3 ~/.home/bin/home_cli.py update"),
+    ("Reload", "reload refresh", "Rebuild the index", "__reload__"),
+    ("Quit", "quit exit close", "Close the panel", "__quit__"),
 ]
 
 
@@ -72,6 +81,20 @@ def build_text_tool_index():
 def build_tool_index():
     """Build index rows from CLI tool invocations."""
     return _build_command_index(TOOLS, "[CLI]", "32")
+
+
+def build_panel_action_index():
+    """Build index rows from panel-level system actions."""
+    lines = []
+    for name, noun, description, action in PANEL_ACTIONS:
+        # Skip Shell if fish is not available
+        if action != "__reload__" and action != "__quit__":
+            if not shutil.which(action.split()[0]):
+                continue
+        display = format_row("[Sys]", "90", name, description)
+        search_key = f"{name} {noun} {description}"
+        lines.append(f"{search_key}\t{display}\t{action}")
+    return lines
 
 
 def _build_command_index(entries, type_label, type_color):
@@ -148,7 +171,7 @@ def build_app_index():
 
 def build_index():
     """Aggregate all index sources."""
-    return "\n".join(build_subcommand_index() + build_text_tool_index() + build_tool_index() + build_bookmark_index() + build_repository_index() + build_app_index())
+    return "\n".join(build_subcommand_index() + build_text_tool_index() + build_tool_index() + build_bookmark_index() + build_repository_index() + build_app_index() + build_panel_action_index())
 
 
 # --------------------------------------------------------------------------- #
@@ -199,6 +222,11 @@ def main():
             continue
 
         action = result.stdout.strip().split("\t")[2]
+        if action == "__reload__":
+            continue
+        if action == "__quit__":
+            hide_panel()
+            break
         r = subprocess.run([SHELL, "-c", action])
         hide_panel()
         if r.returncode == 0:
