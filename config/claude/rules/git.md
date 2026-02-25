@@ -1,0 +1,3 @@
+- When creating a commit:
+    - Do not add co-authorship
+    - Keep the description concise; omit if unnecessary
