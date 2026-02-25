@@ -104,8 +104,9 @@ end
 -- Panel Control
 --------------------------------------------------
 
---- Hides the quick-access panel. Called from Python via `hs -c`.
+--- Hides the quick-access panel and backdrop. Called from Python via `hs -c`.
 function HideQuickAccess()
+  hideBackdrop()
   local app = hs.application.get(APP_NAME)
   if app then app:hide() end
 end
