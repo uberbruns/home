@@ -47,7 +47,7 @@ Apply each item systematically.
 
 - [ ] **Consistency** - Same concept uses same name (or name variant) across function flow; avoid synonyms
 - [ ] **Variables** - Specific, unabbreviated names that communicate purpose without extra context
-- [ ] **Functions** - Name and purpose match and are easy to grasp
+- [ ] **Functions** - Name matches purposes and implementation in body
 - [ ] **Specificity** - Prefer precise terms over generic ones; derive from symbol/function docs
 - [ ] **Length** - Names should be long enough to be unambiguous and short enough to be scannable; the right name feels obvious in retrospect. Err on the side of too long rather than too short.
 - [ ] **Weight** - Reserve generic verbs (`get`, `set`) for lightweight accessors; use more descriptive verbs (`discover`, `compute`, `load`) for non-trivial operations

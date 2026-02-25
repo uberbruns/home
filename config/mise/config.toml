@@ -11,7 +11,6 @@ uv = "latest"
 yazi = "latest"
 yq = "latest"
 "github:da-luce/astroterm" = "latest"
-# "go:github.com/savedra1/clipse" = "latest"
 "npm:@fresh-editor/fresh-editor" = "latest"
 "npm:figlet" = "latest"
 

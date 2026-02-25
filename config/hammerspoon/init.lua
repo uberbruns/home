@@ -15,7 +15,7 @@ local workspace = require("workspace")
 -- \___/\___/_//_/_//_/\_, /\_,_/_/  \__/
 --                    /___/
 
-require("kitten")
+require("kitty-quick-access")
 require("selection")
 
 -- Workspace
@@ -45,15 +45,6 @@ workspace.registerApp("t", "com.mitchellh.ghostty")
 workspace.registerApp("w", "com.apple.Safari")
 workspace.registerApp("x", "com.apple.dt.Xcode")
 workspace.setSplitKey("space")
-
--- Quick Access Terminal
-hs.hotkey.bind({"cmd"}, "space", function()
-  CaptureSelectionForPicker()
-  hs.task.new("/opt/homebrew/bin/kitten", function()
-    ApplyQueuedReplacement()
-  end, {"quick-access-terminal", os.getenv("HOME")}):start()
-end)
-
 
 -- Window Focus
 windows.bindCycleWindows("delete")

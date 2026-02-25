@@ -173,6 +173,20 @@ def format_row(type_label, type_color, title, details):
 # Main
 # --------------------------------------------------------------------------- #
 
+HS = shutil.which("hs") or "hs"
+SHELL = os.environ.get("SHELL", "fish")
+
+
+def hide_panel():
+    """Hide the quick-access panel via Hammerspoon."""
+    subprocess.run([HS, "-c", "HideQuickAccess()"], capture_output=True)
+
+
+def apply_queued_replacement():
+    """Tell Hammerspoon to apply any queued text replacement."""
+    subprocess.run([HS, "-c", "ApplyQueuedReplacement()"], capture_output=True)
+
+
 def main():
     os.chdir(os.path.expanduser("~"))
 
@@ -180,12 +194,14 @@ def main():
         index = build_index()
         result = subprocess.run(FZF_ARGS, input=index, text=True, capture_output=True)
         if result.returncode != 0 or not result.stdout.strip():
-            break
+            hide_panel()
+            continue
 
         action = result.stdout.strip().split("\t")[2]
-        r = subprocess.run(["/bin/sh", "-c", action])
+        r = subprocess.run([SHELL, "-c", action])
+        hide_panel()
         if r.returncode == 0:
-            break
+            apply_queued_replacement()
 
 
 if __name__ == "__main__":
