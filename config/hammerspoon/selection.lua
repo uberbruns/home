@@ -80,6 +80,10 @@ local function readSelectionViaClipboard(app)
   local selected = hs.pasteboard.getContents()
   hs.pasteboard.setContents(saved or "")
 
+  -- Refocus the quick-access panel
+  local panel = hs.application.get("kitty-quick-access")
+  if panel then panel:activate() end
+
   if selected and #selected > 0 then return selected end
   return nil
 end
