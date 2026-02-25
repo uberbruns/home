@@ -25,6 +25,7 @@ local borderCanvas = nil
 local isBackdropVisible = false
 local isSuppressingAutoHide = false
 local overlayCanvas = nil
+local targetScreen = nil
 
 --------------------------------------------------
 -- Canvas Helpers
@@ -104,6 +105,16 @@ end
 -- Panel Control
 --------------------------------------------------
 
+-- Moves the panel window to the target screen, centering it.
+local function moveToTargetScreen(app)
+  if not targetScreen then return end
+  local window = app:mainWindow()
+  if not window then return end
+  if window:screen() == targetScreen then return end
+  window:moveToScreen(targetScreen, false, false, 0)
+  window:centerOnScreen(targetScreen, false, 0)
+end
+
 --- Hides the quick-access panel and backdrop. Called from Python via `hs -c`.
 function HideQuickAccess()
   hideBackdrop()
@@ -128,11 +139,16 @@ hs.hotkey.bind({"cmd"}, "space", function()
     return
   end
 
+  -- Remember which screen the focused window is on
+  local focusedWindow = hs.window.focusedWindow()
+  targetScreen = focusedWindow and focusedWindow:screen() or hs.screen.mainScreen()
+
   -- Grab element reference (deferred read happens after panel is visible)
   CaptureSelectionForPicker()
 
   -- Reactivate existing panel or cold-start a new one
   if app then
+    moveToTargetScreen(app)
     app:activate()
   else
     hs.task.new("/opt/homebrew/bin/kitten", nil, {
@@ -148,6 +164,7 @@ end)
 QuickAccessWatcher = hs.application.watcher.new(function(appName, eventType)
   if eventType == hs.application.watcher.activated then
     if appName == APP_NAME then
+      moveToTargetScreen(hs.application.get(APP_NAME))
       showBackdrop()
     elseif isBackdropVisible and not isSuppressingAutoHide then
       hideBackdrop()
