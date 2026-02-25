@@ -21,7 +21,7 @@ FZF_ARGS = [
     "fzf", "--ansi", "--prompt=❯ ", "--no-hscroll",
     "--color=16",
     "--color=prompt:15,bg+:0,fg+:15:regular,hl:regular,hl+:regular,gutter:0,pointer:15",
-    "--pointer=▌", "--no-scrollbar",
+    "--pointer=▌", "--no-scrollbar", "--info=right",
     "--delimiter=\t", "--nth=1", "--with-nth=2", "--ignore-case",
     "--bind", "enter:accept",
 ]
