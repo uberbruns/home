@@ -37,7 +37,7 @@ labels = ["cli"]
 
 [[mise]]
 source = "config/mise/config-macos.toml"
-target = "~/.config/mise.toml"
+target = "~/.config/mise/conf.d/config-macos.toml"
 labels = ["macos", "cli"]
 
 [[mise]]
