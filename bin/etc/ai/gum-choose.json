@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gum Choose Options",
+  "description": "JSON schema for gum choose command options",
+  "type": "object",
+  "properties": {
+    "header": {
+      "type": "string",
+      "description": "Header value"
+    },
+    "options": {
+      "type": "array",
+      "description": "Options to choose from",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}
