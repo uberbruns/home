@@ -55,6 +55,7 @@ end
 --- Begins polling modifier state at 30 Hz with a 5-second safety timeout.
 function M.startPolling()
   if pollTimer then return end
+  isDown = true
   pollTimer = hs.timer.doEvery(1/30, pollHyperState)
   hs.timer.doAfter(5, function()
     if not pollTimer then return end
