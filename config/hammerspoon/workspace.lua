@@ -2,15 +2,18 @@
   Hyper-key driven app launcher with automatic tiling layout.
 
   Queuing Rules:
-  - Actions accumulate while hyper is held, process on release
+  - Actions accumulate while hyper is held
   - Actions process immediately when hyper is not held
   - Consecutive actions with same bundle ID merge, summing weights
   - Split actions break merging without producing tiles
 
   Layout Rules:
-  - Single action: replay memorized app group containing the app if available,
-    otherwise raise all windows; the activated app retains focus
-  - Multiple actions: activate apps and tile windows proportionally
+  - Single action on release: replay memorized action sequence containing the app
+    if available, otherwise raise all windows; the activated app retains focus
+  - Repeated shorthand: creates a single-app action sequence with the summed weight
+  - Multiple actions while held: memorize action sequence and tile immediately;
+    each additional action re-memorizes and re-tiles
+  - Hyper release after action sequence layout is a no-op
   - Target screen: first app's main window > focused window > main screen
   - Windows distribute one per tile; last tile receives remaining windows
   - Tiles with no available windows are dropped
@@ -18,12 +21,12 @@
     otherwise the first app's main window receives focus
 
   Memorization Rules:
-  - Multi-app layouts are memorized as app groups
-  - Each app group stores a list of bundle IDs and weights
+  - Multi-app layouts are memorized as action sequences
+  - Each action sequence stores merged actions including splits
 
   Glossary:
   - action: queued intent with a type, bundle ID, and weight
-  - app group: a memorized sequence of apps that are tiled horizontally together
+  - action sequence: memorized merged actions (including splits) that are tiled horizontally
   - tile: resolved action bound to an app and its assigned windows
   - weight: proportional share of screen width
 ]]
@@ -51,39 +54,42 @@ local ActionType = {
 --------------------------------------------------
 
 local actionQueue = {}
-local preactivatedApp = nil
-local memorizedAppGroups = {}  -- list of app groups, each a list of { bundleID, weight }
+local eagerFocusedWindow = nil  -- focused window captured at start of hyper session
+local eagerPhase = nil           -- nil | "preactivated" | "laid_out"
+local memorizedActionSequences = {}    -- list of action sequences, each a list of merged actions
 local registeredApps = {}
 local registeredLetters = {}
 
 --------------------------------------------------
--- App Group Memorization
+-- Action Sequence Memorization
 --------------------------------------------------
 
--- Returns the memorized app group containing bundleID, or nil.
-local function findAppGroup(bundleID)
-  for _, appGroup in ipairs(memorizedAppGroups) do
-    for _, entry in ipairs(appGroup) do
-      if entry.bundleID == bundleID then
-        return appGroup
+-- Returns the memorized action sequence containing bundleID, or nil.
+local function findActionSequence(bundleID)
+  for _, actionSequence in ipairs(memorizedActionSequences) do
+    for _, action in ipairs(actionSequence) do
+      if action.id == bundleID then
+        return actionSequence
       end
     end
   end
 end
 
--- Memorizes a new app group, removing its participants from existing app groups.
-local function memorizeAppGroup(newAppGroup)
+-- Memorizes a new action sequence, removing its participants from existing sequences.
+local function memorizeActionSequence(newActionSequence)
   local participating = {}
-  for _, entry in ipairs(newAppGroup) do
-    participating[entry.bundleID] = true
+  for _, action in ipairs(newActionSequence) do
+    if action.id then
+      participating[action.id] = true
+    end
   end
 
   local pruned = {}
-  for _, appGroup in ipairs(memorizedAppGroups) do
+  for _, actionSequence in ipairs(memorizedActionSequences) do
     local filtered = {}
-    for _, entry in ipairs(appGroup) do
-      if not participating[entry.bundleID] then
-        table.insert(filtered, entry)
+    for _, action in ipairs(actionSequence) do
+      if not action.id or not participating[action.id] then
+        table.insert(filtered, action)
       end
     end
     if #filtered > 0 then
@@ -91,8 +97,8 @@ local function memorizeAppGroup(newAppGroup)
     end
   end
 
-  table.insert(pruned, newAppGroup)
-  memorizedAppGroups = pruned
+  table.insert(pruned, newActionSequence)
+  memorizedActionSequences = pruned
 end
 
 --------------------------------------------------
@@ -166,13 +172,13 @@ local function zOrderAfterActivation(currentOrder, bundleID)
   return result
 end
 
--- Returns the z-order that would result from activating an app group back to front,
+-- Returns the z-order that would result from activating an action sequence back to front,
 -- then the focus app last.
-local function zOrderAfterAppGroup(currentOrder, appGroupBundleIDs, focusBundleID)
+local function zOrderAfterActionSequence(currentOrder, sequenceBundleIDs, focusBundleID)
   local order = currentOrder
-  for i = #appGroupBundleIDs, 1, -1 do
-    if appGroupBundleIDs[i] ~= focusBundleID then
-      order = zOrderAfterActivation(order, appGroupBundleIDs[i])
+  for i = #sequenceBundleIDs, 1, -1 do
+    if sequenceBundleIDs[i] ~= focusBundleID then
+      order = zOrderAfterActivation(order, sequenceBundleIDs[i])
     end
   end
   if focusBundleID then
@@ -440,25 +446,23 @@ end
 -- Queue Processing
 --------------------------------------------------
 
--- Replays a memorized app group, positioning tiles and focusing the target app.
-local function replayAppGroup(appGroup, bundleID, initialFocusedWindow)
-  local appGroupBundleIDs = {}
-  for _, entry in ipairs(appGroup) do
-    table.insert(appGroupBundleIDs, entry.bundleID)
+-- Replays a memorized action sequence, positioning tiles and focusing the target app.
+local function replayActionSequence(actionSequence, bundleID, initialFocusedWindow)
+  local sequenceBundleIDs = {}
+  for _, action in ipairs(actionSequence) do
+    if action.id then
+      table.insert(sequenceBundleIDs, action.id)
+    end
   end
 
   -- Determine whether replaying would change z-order beyond a simple activation
   local currentOrder = bundleIDsByZOrder()
   local needsReorder = zOrdersDiffer(
-    zOrderAfterAppGroup(currentOrder, appGroupBundleIDs, bundleID),
+    zOrderAfterActionSequence(currentOrder, sequenceBundleIDs, bundleID),
     zOrderAfterActivation(currentOrder, bundleID)
   )
 
-  local tiles = buildTiles(
-    hs.fnutils.imap(appGroup, function(entry)
-      return { id = entry.bundleID, type = ActionType.focusOrLayout, weight = entry.weight }
-    end)
-  )
+  local tiles = buildTiles(actionSequence)
 
   hs.timer.doAfter(0.1, function()
     applyLayout(tiles, initialFocusedWindow, {
@@ -468,54 +472,54 @@ local function replayAppGroup(appGroup, bundleID, initialFocusedWindow)
   end)
 end
 
--- Activates the first resolved app immediately for responsiveness while hyper is held.
-local function preactivateFirstApp()
-  if preactivatedApp then return end
-
+-- Resolves the current queue and applies layout eagerly while hyper is held.
+-- On first app: preactivates for responsiveness.
+-- On repeated shorthand or multiple apps: memorizes action sequence and tiles immediately.
+local function updateEagerLayout()
   local resolved = resolveLetterActions(actionQueue)
-  for _, action in ipairs(resolved) do
-    if action.type == ActionType.focusOrLayout then
-      local app = ensureApp(action.id)
-      if app then app:activate() end
-      preactivatedApp = app
-      return
-    end
+  local mergedActions = mergeConsecutiveActions(resolved)
+  local tiles = buildTiles(mergedActions)
+  local isActionSequence = #tiles >= 2 or (#tiles == 1 and tiles[1].weight > 1)
+
+  if isActionSequence then
+    -- Action sequence: memorize and layout immediately
+    memorizeActionSequence(mergedActions)
+    applyLayout(tiles, eagerFocusedWindow)
+    eagerPhase = "laid_out"
+  elseif #tiles == 1 and not eagerPhase then
+    -- First app: preactivate
+    tiles[1].app:activate()
+    eagerPhase = "preactivated"
   end
 end
 
--- Drains the action queue: resolves, merges, activates apps, and applies layout.
+-- Drains the action queue on hyper release or immediate processing.
+-- Multi-app layouts are already applied eagerly; only single-app needs handling here.
 local function processQueue()
-  preactivatedApp = nil
+  local initialFocusedWindow = eagerFocusedWindow or hs.window.focusedWindow()
+  local wasLaidOut = eagerPhase == "laid_out"
+  eagerPhase = nil
+  eagerFocusedWindow = nil
+
   if #actionQueue == 0 then return end
 
   -- Snapshot and clear queue
   local actions = actionQueue
   actionQueue = {}
 
+  -- Multi-app layout was already applied eagerly
+  if wasLaidOut then return end
+
+  -- Single app: replay memorized action sequence or activate
   local resolvedActions = resolveLetterActions(actions)
-  local initialFocusedWindow = hs.window.focusedWindow()
   local tiles = buildTiles(resolvedActions)
 
-  if #resolvedActions > 1 then
-    -- Multi-app: memorize app group and tile
-    if #tiles > 0 then
-      local appGroup = {}
-      for _, tile in ipairs(tiles) do
-        table.insert(appGroup, { bundleID = tile.app:bundleID(), weight = tile.weight })
-      end
-      memorizeAppGroup(appGroup)
-    end
-
-    hs.timer.doAfter(0.1, function()
-      applyLayout(tiles, initialFocusedWindow)
-    end)
-  elseif #tiles == 1 then
-    -- Single app: replay memorized app group or activate
+  if #tiles == 1 then
     local bundleID = tiles[1].app:bundleID()
-    local appGroup = findAppGroup(bundleID)
+    local actionSequence = findActionSequence(bundleID)
 
-    if appGroup then
-      replayAppGroup(appGroup, bundleID, initialFocusedWindow)
+    if actionSequence then
+      replayActionSequence(actionSequence, bundleID, initialFocusedWindow)
     else
       hs.timer.doAfter(0.1, function()
         tiles[1].app:activate(true)
@@ -524,13 +528,16 @@ local function processQueue()
   end
 end
 
--- Appends an action and processes immediately or defers to hyper release.
+-- Appends an action and applies eagerly while hyper is held, or processes on release.
 local function enqueueAction(action)
   table.insert(actionQueue, action)
 
   if isHyperHeld() then
     hyperkey.startPolling()
-    preactivateFirstApp()
+    if not eagerFocusedWindow then
+      eagerFocusedWindow = hs.window.focusedWindow()
+    end
+    updateEagerLayout()
   else
     processQueue()
   end
