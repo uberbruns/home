@@ -8,7 +8,7 @@
   - Split actions break merging without producing tiles
 
   Layout Rules:
-  - Single action: replay recorded sequence containing the app if available,
+  - Single action: replay memorized app group containing the app if available,
     otherwise raise all windows; the activated app retains focus
   - Multiple actions: activate apps and tile windows proportionally
   - Target screen: first app's main window > focused window > main screen
@@ -17,12 +17,13 @@
   - Focus restores to the initially focused window if tiled,
     otherwise the first app's main window receives focus
 
-  Recording Rules:
-  - Multi-app layouts are recorded, keyed by the first app's bundle ID
-  - Each record stores the full sequence of bundle IDs and weights
+  Memorization Rules:
+  - Multi-app layouts are memorized as app groups
+  - Each app group stores a list of bundle IDs and weights
 
   Glossary:
   - action: queued intent with a type, bundle ID, and weight
+  - app group: a memorized sequence of apps that are tiled horizontally together
   - tile: resolved action bound to an app and its assigned windows
   - weight: proportional share of screen width
 ]]
@@ -50,38 +51,37 @@ local ActionType = {
 --------------------------------------------------
 
 local actionQueue = {}
-local eagerActivatedApp = nil
-local recordedSequences = {}  -- list of sequences, each a list of { bundleID, weight }
+local preactivatedApp = nil
+local memorizedAppGroups = {}  -- list of app groups, each a list of { bundleID, weight }
 local registeredApps = {}
 local registeredLetters = {}
 
 --------------------------------------------------
--- Sequence Recording
+-- App Group Memorization
 --------------------------------------------------
 
--- Returns the recorded sequence containing bundleID, or nil.
-local function findSequence(bundleID)
-  for _, sequence in ipairs(recordedSequences) do
-    for _, entry in ipairs(sequence) do
+-- Returns the memorized app group containing bundleID, or nil.
+local function findAppGroup(bundleID)
+  for _, appGroup in ipairs(memorizedAppGroups) do
+    for _, entry in ipairs(appGroup) do
       if entry.bundleID == bundleID then
-        return sequence
+        return appGroup
       end
     end
   end
 end
 
--- Records a new sequence, removing its participants from existing sequences.
-local function recordSequence(newSequence)
+-- Memorizes a new app group, removing its participants from existing app groups.
+local function memorizeAppGroup(newAppGroup)
   local participating = {}
-  for _, entry in ipairs(newSequence) do
+  for _, entry in ipairs(newAppGroup) do
     participating[entry.bundleID] = true
   end
 
-  -- Remove participating apps from existing sequences
   local pruned = {}
-  for _, sequence in ipairs(recordedSequences) do
+  for _, appGroup in ipairs(memorizedAppGroups) do
     local filtered = {}
-    for _, entry in ipairs(sequence) do
+    for _, entry in ipairs(appGroup) do
       if not participating[entry.bundleID] then
         table.insert(filtered, entry)
       end
@@ -91,12 +91,12 @@ local function recordSequence(newSequence)
     end
   end
 
-  table.insert(pruned, newSequence)
-  recordedSequences = pruned
+  table.insert(pruned, newAppGroup)
+  memorizedAppGroups = pruned
 end
 
 --------------------------------------------------
--- Supporting Functions
+-- App Management
 --------------------------------------------------
 
 -- Returns the app for a bundle ID, launching it if not running.
@@ -110,7 +110,7 @@ local function ensureApp(bundleID)
 end
 
 -- Returns all standard windows for an app.
-local function collectStandardWindows(app)
+local function standardWindows(app)
   local windows = {}
   for _, window in ipairs(app:allWindows()) do
     if window:isStandard() then
@@ -126,8 +126,22 @@ local function isHyperHeld()
   return flags.alt and flags.cmd and flags.ctrl and flags.shift
 end
 
+-- Activates apps back to front, with the focus app last.
+local function activateApps(apps, focusApp)
+  for i = #apps, 1, -1 do
+    if apps[i] ~= focusApp then
+      apps[i]:activate(true)
+    end
+  end
+  if focusApp then focusApp:activate(true) end
+end
+
+--------------------------------------------------
+-- Z-Order
+--------------------------------------------------
+
 -- Returns the z-ordered list of bundle IDs from all visible windows (front to back).
-local function windowZOrder()
+local function bundleIDsByZOrder()
   local order = {}
   local seen = {}
   for _, window in ipairs(hs.window.orderedWindows()) do
@@ -141,7 +155,7 @@ local function windowZOrder()
 end
 
 -- Returns the z-order that would result from activating a single app.
-local function orderAfterSingleActivation(currentOrder, bundleID)
+local function zOrderAfterActivation(currentOrder, bundleID)
   local result = {}
   for _, id in ipairs(currentOrder) do
     if id ~= bundleID then
@@ -152,30 +166,28 @@ local function orderAfterSingleActivation(currentOrder, bundleID)
   return result
 end
 
--- Returns the z-order that would result from activating a sequence back to front,
+-- Returns the z-order that would result from activating an app group back to front,
 -- then the focus app last.
-local function orderAfterSequence(currentOrder, sequenceBundleIDs, focusBundleID)
+local function zOrderAfterAppGroup(currentOrder, appGroupBundleIDs, focusBundleID)
   local order = currentOrder
-  for i = #sequenceBundleIDs, 1, -1 do
-    if sequenceBundleIDs[i] ~= focusBundleID then
-      order = orderAfterSingleActivation(order, sequenceBundleIDs[i])
+  for i = #appGroupBundleIDs, 1, -1 do
+    if appGroupBundleIDs[i] ~= focusBundleID then
+      order = zOrderAfterActivation(order, appGroupBundleIDs[i])
     end
   end
   if focusBundleID then
-    order = orderAfterSingleActivation(order, focusBundleID)
+    order = zOrderAfterActivation(order, focusBundleID)
   end
   return order
 end
 
-
--- Activates apps back to front, with the focus app last.
-local function activateApps(apps, focusApp)
-  for i = #apps, 1, -1 do
-    if apps[i] ~= focusApp then
-      apps[i]:activate(true)
-    end
+-- Returns whether two z-order lists differ.
+local function zOrdersDiffer(a, b)
+  if #a ~= #b then return true end
+  for i, id in ipairs(a) do
+    if id ~= b[i] then return true end
   end
-  if focusApp then focusApp:activate(true) end
+  return false
 end
 
 --------------------------------------------------
@@ -251,43 +263,40 @@ end
 
 -- Distributes each app's standard windows across its tiles (last tile gets remaining).
 local function assignWindowsToTiles(tiles)
-  local groupsByApp = {}
+  -- Collect windows and count tiles per app
+  local windowsByBundle = {}
+  local tileCountByBundle = {}
   for _, tile in ipairs(tiles) do
     local bundleID = tile.app:bundleID()
-    if not groupsByApp[bundleID] then
-      groupsByApp[bundleID] = {
-        tiles = {},
-        windows = collectStandardWindows(tile.app),
-      }
+    if not windowsByBundle[bundleID] then
+      windowsByBundle[bundleID] = standardWindows(tile.app)
     end
-    table.insert(groupsByApp[bundleID].tiles, tile)
+    tileCountByBundle[bundleID] = (tileCountByBundle[bundleID] or 0) + 1
   end
 
+  -- Assign windows: one per tile, last tile gets remaining
   local result = {}
+  local nextIndexByBundle = {}
+  local assignedCountByBundle = {}
   for _, tile in ipairs(tiles) do
     local bundleID = tile.app:bundleID()
-    local group = groupsByApp[bundleID]
-    if not group or #group.windows == 0 then goto continue end
+    local windows = windowsByBundle[bundleID]
+    local nextIndex = nextIndexByBundle[bundleID] or 1
+    local assignedCount = (assignedCountByBundle[bundleID] or 0) + 1
+    assignedCountByBundle[bundleID] = assignedCount
 
-    -- Count previously assigned tiles for this app
-    local assignedCount = 0
-    for _, assigned in ipairs(result) do
-      if assigned.app:bundleID() == bundleID then
-        assignedCount = assignedCount + 1
-      end
-    end
+    if nextIndex > #windows then goto continue end
 
-    local remainingWindows = #group.windows - assignedCount
-    if remainingWindows <= 0 then goto continue end
-
-    local isLastTile = (assignedCount + 1) == #group.tiles
+    local isLastTile = assignedCount == tileCountByBundle[bundleID]
     local tileWindows = {}
     if isLastTile then
-      for i = assignedCount + 1, #group.windows do
-        table.insert(tileWindows, group.windows[i])
+      for i = nextIndex, #windows do
+        table.insert(tileWindows, windows[i])
       end
+      nextIndexByBundle[bundleID] = #windows + 1
     else
-      table.insert(tileWindows, group.windows[assignedCount + 1])
+      table.insert(tileWindows, windows[nextIndex])
+      nextIndexByBundle[bundleID] = nextIndex + 1
     end
 
     table.insert(result, {
@@ -350,17 +359,17 @@ local function resolveLetterActions(actions)
       table.insert(resolved, action)
       index = index + 1
     else
-      -- Collect consecutive letters into a sequence
-      local sequence = ""
+      -- Collect consecutive letters
+      local letters = ""
       for i = index, #actions do
         if actions[i].type ~= ActionType.letter then break end
-        sequence = sequence .. actions[i].id
+        letters = letters .. actions[i].id
       end
 
       -- Match longest prefix against registered apps
       local matched = false
-      for tryLength = #sequence, 1, -1 do
-        local registration = registeredApps[sequence:sub(1, tryLength)]
+      for tryLength = #letters, 1, -1 do
+        local registration = registeredApps[letters:sub(1, tryLength)]
         if registration then
           table.insert(resolved, {
             id = registration.bundleID,
@@ -431,16 +440,44 @@ end
 -- Queue Processing
 --------------------------------------------------
 
+-- Replays a memorized app group, positioning tiles and focusing the target app.
+local function replayAppGroup(appGroup, bundleID, initialFocusedWindow)
+  local appGroupBundleIDs = {}
+  for _, entry in ipairs(appGroup) do
+    table.insert(appGroupBundleIDs, entry.bundleID)
+  end
+
+  -- Determine whether replaying would change z-order beyond a simple activation
+  local currentOrder = bundleIDsByZOrder()
+  local needsReorder = zOrdersDiffer(
+    zOrderAfterAppGroup(currentOrder, appGroupBundleIDs, bundleID),
+    zOrderAfterActivation(currentOrder, bundleID)
+  )
+
+  local tiles = buildTiles(
+    hs.fnutils.imap(appGroup, function(entry)
+      return { id = entry.bundleID, type = ActionType.focusOrLayout, weight = entry.weight }
+    end)
+  )
+
+  hs.timer.doAfter(0.1, function()
+    applyLayout(tiles, initialFocusedWindow, {
+      focusBundleID = bundleID,
+      skipReorder = not needsReorder,
+    })
+  end)
+end
+
 -- Activates the first resolved app immediately for responsiveness while hyper is held.
-local function eagerActivateFirst()
-  if eagerActivatedApp then return end
+local function preactivateFirstApp()
+  if preactivatedApp then return end
 
   local resolved = resolveLetterActions(actionQueue)
   for _, action in ipairs(resolved) do
     if action.type == ActionType.focusOrLayout then
       local app = ensureApp(action.id)
       if app then app:activate() end
-      eagerActivatedApp = app
+      preactivatedApp = app
       return
     end
   end
@@ -448,7 +485,7 @@ end
 
 -- Drains the action queue: resolves, merges, activates apps, and applies layout.
 local function processQueue()
-  eagerActivatedApp = nil
+  preactivatedApp = nil
   if #actionQueue == 0 then return end
 
   -- Snapshot and clear queue
@@ -457,55 +494,28 @@ local function processQueue()
 
   local resolvedActions = resolveLetterActions(actions)
   local initialFocusedWindow = hs.window.focusedWindow()
-
   local tiles = buildTiles(resolvedActions)
 
   if #resolvedActions > 1 then
+    -- Multi-app: memorize app group and tile
     if #tiles > 0 then
-      local sequence = {}
+      local appGroup = {}
       for _, tile in ipairs(tiles) do
-        table.insert(sequence, { bundleID = tile.app:bundleID(), weight = tile.weight })
+        table.insert(appGroup, { bundleID = tile.app:bundleID(), weight = tile.weight })
       end
-      recordSequence(sequence)
+      memorizeAppGroup(appGroup)
     end
 
     hs.timer.doAfter(0.1, function()
       applyLayout(tiles, initialFocusedWindow)
     end)
   elseif #tiles == 1 then
+    -- Single app: replay memorized app group or activate
     local bundleID = tiles[1].app:bundleID()
-    local sequence = findSequence(bundleID)
+    local appGroup = findAppGroup(bundleID)
 
-    if sequence then
-      local sequenceBundleIDs = {}
-      for _, entry in ipairs(sequence) do
-        table.insert(sequenceBundleIDs, entry.bundleID)
-      end
-
-      local currentOrder = windowZOrder()
-      local afterSequence = orderAfterSequence(currentOrder, sequenceBundleIDs, bundleID)
-      local afterSingle = orderAfterSingleActivation(currentOrder, bundleID)
-
-      -- Fast path: sequence apps are already in the right z-order
-      local needsReorder = #afterSequence ~= #afterSingle
-      if not needsReorder then
-        for i, id in ipairs(afterSequence) do
-          if id ~= afterSingle[i] then
-            needsReorder = true
-            break
-          end
-        end
-      end
-
-      local replayTiles = buildTiles(
-        hs.fnutils.imap(sequence, function(entry)
-          return { id = entry.bundleID, type = ActionType.focusOrLayout, weight = entry.weight }
-        end)
-      )
-      local opts = { focusBundleID = bundleID, skipReorder = not needsReorder }
-      hs.timer.doAfter(0.1, function()
-        applyLayout(replayTiles, initialFocusedWindow, opts)
-      end)
+    if appGroup then
+      replayAppGroup(appGroup, bundleID, initialFocusedWindow)
     else
       hs.timer.doAfter(0.1, function()
         tiles[1].app:activate(true)
@@ -520,7 +530,7 @@ local function enqueueAction(action)
 
   if isHyperHeld() then
     hyperkey.startPolling()
-    eagerActivateFirst()
+    preactivateFirstApp()
   else
     processQueue()
   end
