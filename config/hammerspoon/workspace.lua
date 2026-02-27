@@ -19,6 +19,8 @@
     because tiling already occurred.
 
   On hyper release with a single shorthand (combo replay):
+  - If the app is already focused, the system cycles through its
+    windows by focusing the backmost one.
   - If the app belongs to a previously memorized combo, the system
     replays the full combo — tiling all its apps.
   - If no memorized combo contains the app, the system activates the
@@ -78,6 +80,19 @@ local shorthandQueue = {}
 --------------------------------------------------
 -- App Helpers
 --------------------------------------------------
+
+-- Cycles through an app's windows by focusing its backmost window.
+local function cycleWindows(app)
+  local appWindows = {}
+  for _, window in ipairs(hs.window.orderedWindows()) do
+    if window:application() == app then
+      table.insert(appWindows, window)
+    end
+  end
+  if #appWindows > 1 then
+    appWindows[#appWindows]:focus()
+  end
+end
 
 -- Activates apps back to front, with the focussed app last.
 local function activateApps(apps, focussedApp)
@@ -523,20 +538,26 @@ local function processQueue()
   -- Combo was already tiled during combo building
   if wasTiled then return end
 
-  -- Single app: replay its memorized combo if one exists, otherwise just activate
+  -- Single app: cycle windows if already focused, replay combo, or activate
   local mergedShorthands = mergeShorthands(resolveKeystrokes(shorthands))
   local tiles = buildTiles(mergedShorthands)
 
   if #tiles == 1 then
-    local bundleID = tiles[1].app:bundleID()
-    local combo = findCombo(bundleID)
+    local app = tiles[1].app
+    local bundleID = app:bundleID()
+    local initialBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID()
 
-    if combo then
-      replayCombo(combo, bundleID, initialFocusedWindow)
+    if bundleID == initialBundleID then
+      cycleWindows(app)
     else
-      hs.timer.doAfter(0.1, function()
-        tiles[1].app:activate(true)
-      end)
+      local combo = findCombo(bundleID)
+      if combo then
+        replayCombo(combo, bundleID, initialFocusedWindow)
+      else
+        hs.timer.doAfter(0.1, function()
+          app:activate(true)
+        end)
+      end
     end
   end
 end
