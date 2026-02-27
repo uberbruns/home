@@ -1,34 +1,49 @@
 --[[
-  Hyper-key driven app launcher with automatic tiling layout.
+  Hyper-key driven app launcher with automatic tiling.
 
-  Queuing Rules:
-  - Actions accumulate while hyper is held
-  - Actions process immediately when hyper is not held
-  - Consecutive actions with same bundle ID merge, summing weights
-  - Split actions break merging without producing tiles
+  The system resolves each hyper keystroke to a shorthand — either an app
+  or a split. When the same app appears consecutively, the system merges
+  those shorthands into one and sums their weights. A split shorthand
+  breaks this merging but does not produce a tile itself.
 
-  Layout Rules:
-  - Single action on release: replay memorized action sequence containing the app
-    if available, otherwise raise all windows; the activated app retains focus
-  - Repeated shorthand: creates a single-app action sequence with the summed weight
-  - Multiple actions while held: memorize action sequence and tile immediately;
-    each additional action re-memorizes and re-tiles
-  - Hyper release after action sequence layout is a no-op
-  - Target screen: first app's main window > focused window > main screen
-  - Windows distribute one per tile; last tile receives remaining windows
-  - Tiles with no available windows are dropped
-  - Focus restores to the initially focused window if tiled,
-    otherwise the first app's main window receives focus
+  The system handles input in two phases, depending on when hyper
+  is released:
 
-  Memorization Rules:
-  - Multi-app layouts are memorized as action sequences
-  - Each action sequence stores merged actions including splits
+  While hyper is held (combo building):
+  - The first shorthand preactivates its app for responsiveness.
+  - A repeated shorthand or multiple distinct shorthands form a combo.
+    The system memorizes the combo and tiles its apps immediately.
+  - Each additional shorthand causes the system to update the memorized
+    combo and re-tile all apps.
+  - When the user finally releases hyper, nothing further happens
+    because tiling already occurred.
+
+  On hyper release with a single shorthand (combo replay):
+  - If the app belongs to a previously memorized combo, the system
+    replays the full combo — tiling all its apps.
+  - If no memorized combo contains the app, the system activates the
+    app without tiling.
+  - Combo replay is the only path that restores a memorized combo
+    from a single keystroke.
+
+  Tiling layout:
+  - The system selects the target screen from the leader app's main
+    window, falling back to the focused window, then the main screen.
+  - Each tile receives one of its app's windows. The last tile for
+    each app collects any remaining windows.
+  - The system drops tiles whose app has no available windows.
+  - Focus returns to the initially focused window if it was tiled.
+    Otherwise the leader app receives focus.
 
   Glossary:
-  - action: queued intent with a type, bundle ID, and weight
-  - action sequence: memorized merged actions (including splits) that are tiled horizontally
-  - tile: resolved action bound to an app and its assigned windows
-  - weight: proportional share of screen width
+  - app stack: a z-ordered list of bundle IDs derived from visible windows
+  - combo: a memorized list of merged shorthands that tile horizontally
+  - keystroke: a single hyper key-press that produces an unresolved shorthand
+  - leader app: the first app in a combo
+  - peer app: a non-leader app in a combo
+  - shorthand: a resolved intent carrying a type, bundle ID, and weight
+  - tile: a shorthand bound to an app and its assigned windows
+  - weight: a proportional share of screen width
 ]]
 
 --------------------------------------------------
@@ -43,9 +58,9 @@ local hyperkey = require("hyperkey")
 
 local HYPER_MODIFIERS = {"cmd", "alt", "ctrl", "shift"}
 
-local ActionType = {
-  focusOrLayout = "focusOrLayout",
-  letter = "letter",
+local ShorthandType = {
+  app = "app",
+  keystroke = "keystroke",
   split = "split",
 }
 
@@ -53,57 +68,26 @@ local ActionType = {
 -- State
 --------------------------------------------------
 
-local actionQueue = {}
-local eagerFocusedWindow = nil  -- focused window captured at start of hyper session
-local eagerPhase = nil           -- nil | "preactivated" | "laid_out"
-local memorizedActionSequences = {}    -- list of action sequences, each a list of merged actions
+local buildFocusedWindow = nil   -- focused window captured at start of combo building
+local buildPhase = nil           -- nil | "preactivated" | "tiled"
+local memorizedCombos = {}       -- list of combos, each a list of merged shorthands
 local registeredApps = {}
-local registeredLetters = {}
+local registeredKeystrokes = {}
+local shorthandQueue = {}
 
 --------------------------------------------------
--- Action Sequence Memorization
+-- App Helpers
 --------------------------------------------------
 
--- Returns the memorized action sequence containing bundleID, or nil.
-local function findActionSequence(bundleID)
-  for _, actionSequence in ipairs(memorizedActionSequences) do
-    for _, action in ipairs(actionSequence) do
-      if action.id == bundleID then
-        return actionSequence
-      end
+-- Activates apps back to front, with the focussed app last.
+local function activateApps(apps, focussedApp)
+  for i = #apps, 1, -1 do
+    if apps[i] ~= focussedApp then
+      apps[i]:activate(true)
     end
   end
+  if focussedApp then focussedApp:activate(true) end
 end
-
--- Memorizes a new action sequence, removing its participants from existing sequences.
-local function memorizeActionSequence(newActionSequence)
-  local participating = {}
-  for _, action in ipairs(newActionSequence) do
-    if action.id then
-      participating[action.id] = true
-    end
-  end
-
-  local pruned = {}
-  for _, actionSequence in ipairs(memorizedActionSequences) do
-    local filtered = {}
-    for _, action in ipairs(actionSequence) do
-      if not action.id or not participating[action.id] then
-        table.insert(filtered, action)
-      end
-    end
-    if #filtered > 0 then
-      table.insert(pruned, filtered)
-    end
-  end
-
-  table.insert(pruned, newActionSequence)
-  memorizedActionSequences = pruned
-end
-
---------------------------------------------------
--- App Management
---------------------------------------------------
 
 -- Returns the app for a bundle ID, launching it if not running.
 local function ensureApp(bundleID)
@@ -113,6 +97,12 @@ local function ensureApp(bundleID)
     app = hs.application.get(bundleID)
   end
   return app
+end
+
+-- Returns true if all hyper modifier keys are currently pressed.
+local function isHyperHeld()
+  local flags = hs.eventtap.checkKeyboardModifiers()
+  return flags.alt and flags.cmd and flags.ctrl and flags.shift
 end
 
 -- Returns all standard windows for an app.
@@ -126,146 +116,101 @@ local function standardWindows(app)
   return windows
 end
 
--- Returns true if all hyper modifier keys are currently pressed.
-local function isHyperHeld()
-  local flags = hs.eventtap.checkKeyboardModifiers()
-  return flags.alt and flags.cmd and flags.ctrl and flags.shift
-end
-
--- Activates apps back to front, with the focus app last.
-local function activateApps(apps, focusApp)
-  for i = #apps, 1, -1 do
-    if apps[i] ~= focusApp then
-      apps[i]:activate(true)
-    end
-  end
-  if focusApp then focusApp:activate(true) end
-end
-
 --------------------------------------------------
--- Z-Order
+-- Shorthand Resolution
 --------------------------------------------------
 
--- Returns the z-ordered list of bundle IDs from all visible windows (front to back).
-local function bundleIDsByZOrder()
-  local order = {}
-  local seen = {}
-  for _, window in ipairs(hs.window.orderedWindows()) do
-    local bundleID = window:application():bundleID()
-    if bundleID and not seen[bundleID] then
-      seen[bundleID] = true
-      table.insert(order, bundleID)
-    end
-  end
-  return order
-end
+-- Resolves consecutive keystroke shorthands into app shorthands by longest-prefix matching.
+local function resolveKeystrokes(shorthands)
+  local resolved = {}
+  local index = 1
 
--- Returns the z-order that would result from activating a single app.
-local function zOrderAfterActivation(currentOrder, bundleID)
-  local result = {}
-  for _, id in ipairs(currentOrder) do
-    if id ~= bundleID then
-      table.insert(result, id)
-    end
-  end
-  table.insert(result, 1, bundleID)
-  return result
-end
+  while index <= #shorthands do
+    local shorthand = shorthands[index]
 
--- Returns the z-order that would result from activating an action sequence back to front,
--- then the focus app last.
-local function zOrderAfterActionSequence(currentOrder, sequenceBundleIDs, focusBundleID)
-  local order = currentOrder
-  for i = #sequenceBundleIDs, 1, -1 do
-    if sequenceBundleIDs[i] ~= focusBundleID then
-      order = zOrderAfterActivation(order, sequenceBundleIDs[i])
-    end
-  end
-  if focusBundleID then
-    order = zOrderAfterActivation(order, focusBundleID)
-  end
-  return order
-end
+    if shorthand.type ~= ShorthandType.keystroke then
+      table.insert(resolved, shorthand)
+      index = index + 1
+    else
+      -- Collect consecutive keystrokes
+      local letters = ""
+      for i = index, #shorthands do
+        if shorthands[i].type ~= ShorthandType.keystroke then break end
+        letters = letters .. shorthands[i].id
+      end
 
--- Returns whether two z-order lists differ.
-local function zOrdersDiffer(a, b)
-  if #a ~= #b then return true end
-  for i, id in ipairs(a) do
-    if id ~= b[i] then return true end
-  end
-  return false
-end
+      -- Match longest prefix against registered apps
+      local matched = false
+      for tryLength = #letters, 1, -1 do
+        local registration = registeredApps[letters:sub(1, tryLength)]
+        if registration then
+          table.insert(resolved, {
+            id = registration.bundleID,
+            type = ShorthandType.app,
+            weight = registration.defaultWeight,
+          })
+          index = index + tryLength
+          matched = true
+          break
+        end
+      end
 
---------------------------------------------------
--- Window Positioning
---------------------------------------------------
-
--- Positions a single window within its tile.
-local function positionWindow(window, screenFrame, weight, tileOffset)
-  local width = screenFrame.w * weight
-  local x = screenFrame.x + screenFrame.w * tileOffset
-
-  window:setFrame(hs.geometry.rect(x, screenFrame.y, width, screenFrame.h), 0)
-end
-
--- Positions tiles left-to-right, dividing screen width by weight.
-local function positionTiles(screenFrame, tiles)
-  local totalWeight = 0
-  for _, tile in ipairs(tiles) do
-    totalWeight = totalWeight + tile.weight
-  end
-
-  local offset = 0
-  for _, tile in ipairs(tiles) do
-    local normalizedWeight = tile.weight / totalWeight
-
-    for _, window in ipairs(tile.windows) do
-      positionWindow(window, screenFrame, normalizedWeight, offset)
-    end
-
-    offset = offset + normalizedWeight
-  end
-end
-
---------------------------------------------------
--- Window Layout
---------------------------------------------------
-
--- Resolves the target screen from tiles or falls back to focused/main screen.
-local function resolveTargetScreen(tiles)
-  if #tiles > 0 then
-    local mainWindow = tiles[1].app:mainWindow()
-    if mainWindow then return mainWindow:screen() end
-  end
-
-  local focusedWindow = hs.window.focusedWindow()
-  if focusedWindow then return focusedWindow:screen() end
-
-  return hs.screen.mainScreen()
-end
-
--- Resolves which app should receive focus after tiling.
-local function resolveFocusApp(tiles, initialFocusedWindow, focusBundleID)
-  -- Explicit target: find the matching app
-  if focusBundleID then
-    for _, tile in ipairs(tiles) do
-      if tile.app:bundleID() == focusBundleID then
-        return tile.app
+      if not matched then
+        index = index + 1
       end
     end
   end
 
-  -- Default: first app that differs from the initially focused one
-  local initialBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID()
-  for _, tile in ipairs(tiles) do
-    if tile.app:bundleID() ~= initialBundleID then
-      return tile.app
+  return resolved
+end
+
+-- Merges consecutive shorthands with the same type and ID, summing weights.
+local function mergeShorthands(shorthands)
+  if #shorthands == 0 then return {} end
+
+  local merged = {}
+  local current = {
+    id = shorthands[1].id,
+    type = shorthands[1].type,
+    weight = shorthands[1].weight,
+  }
+
+  for i = 2, #shorthands do
+    local shorthand = shorthands[i]
+    local isMergeable = current.type ~= ShorthandType.split
+      and shorthand.type ~= ShorthandType.split
+      and shorthand.type == current.type
+      and shorthand.id == current.id
+
+    if isMergeable then
+      current.weight = current.weight + shorthand.weight
+    else
+      table.insert(merged, current)
+      current = { id = shorthand.id, type = shorthand.type, weight = shorthand.weight }
     end
   end
 
-  -- Fall back to first tile if all belong to the initially focused app
-  if #tiles > 0 then return tiles[1].app end
+  table.insert(merged, current)
+  return merged
 end
+
+-- Converts merged shorthands into tiles, launching apps as needed.
+local function buildTiles(mergedShorthands)
+  local tiles = {}
+  for _, shorthand in ipairs(mergedShorthands) do
+    if shorthand.type ~= ShorthandType.split then
+      local app = ensureApp(shorthand.id)
+      if app then
+        table.insert(tiles, { app = app, weight = shorthand.weight })
+      end
+    end
+  end
+  return tiles
+end
+
+--------------------------------------------------
+-- Tiling
+--------------------------------------------------
 
 -- Distributes each app's standard windows across its tiles (last tile gets remaining).
 local function assignWindowsToTiles(tiles)
@@ -317,16 +262,73 @@ local function assignWindowsToTiles(tiles)
   return result
 end
 
+-- Positions tiles left-to-right, dividing screen width by weight.
+local function positionTiles(screenFrame, tiles)
+  local totalWeight = 0
+  for _, tile in ipairs(tiles) do
+    totalWeight = totalWeight + tile.weight
+  end
+
+  local offset = 0
+  for _, tile in ipairs(tiles) do
+    local normalizedWeight = tile.weight / totalWeight
+
+    for _, window in ipairs(tile.windows) do
+      local width = screenFrame.w * normalizedWeight
+      local x = screenFrame.x + screenFrame.w * offset
+      window:setFrame(hs.geometry.rect(x, screenFrame.y, width, screenFrame.h), 0)
+    end
+
+    offset = offset + normalizedWeight
+  end
+end
+
+-- Resolves which app should receive focus after tiling.
+local function resolveFocussedApp(tiles, initialFocusedWindow, focussedBundleID)
+  -- Explicit target: find the matching app
+  if focussedBundleID then
+    for _, tile in ipairs(tiles) do
+      if tile.app:bundleID() == focussedBundleID then
+        return tile.app
+      end
+    end
+  end
+
+  -- Default: first app that differs from the initially focused one
+  local initialBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID()
+  for _, tile in ipairs(tiles) do
+    if tile.app:bundleID() ~= initialBundleID then
+      return tile.app
+    end
+  end
+
+  -- Fall back to leader app if all belong to the initially focused app
+  if #tiles > 0 then return tiles[1].app end
+end
+
+-- Resolves the target screen from tiles or falls back to focused/main screen.
+local function resolveTargetScreen(tiles)
+  if #tiles > 0 then
+    local mainWindow = tiles[1].app:mainWindow()
+    if mainWindow then return mainWindow:screen() end
+  end
+
+  local focusedWindow = hs.window.focusedWindow()
+  if focusedWindow then return focusedWindow:screen() end
+
+  return hs.screen.mainScreen()
+end
+
 -- Assigns windows to tiles and positions them proportionally on the target screen.
-local function applyLayout(tiles, initialFocusedWindow, opts)
+local function applyTiling(tiles, initialFocusedWindow, opts)
   local targetScreen = resolveTargetScreen(tiles)
   local screenFrame = targetScreen:frame()
 
   local tilesWithWindows = assignWindowsToTiles(tiles)
   if #tilesWithWindows == 0 then return end
 
-  local focusBundleID = opts and opts.focusBundleID
-  local focusApp = resolveFocusApp(tilesWithWindows, initialFocusedWindow, focusBundleID)
+  local focussedBundleID = opts and opts.focussedBundleID
+  local focussedApp = resolveFocussedApp(tilesWithWindows, initialFocusedWindow, focussedBundleID)
 
   -- Collect unique apps in tile order
   local apps = {}
@@ -342,184 +344,195 @@ local function applyLayout(tiles, initialFocusedWindow, opts)
   positionTiles(screenFrame, tilesWithWindows)
   hs.timer.doAfter(0.01, function()
     if opts and opts.skipReorder then
-      if focusApp then focusApp:activate(true) end
+      if focussedApp then focussedApp:activate(true) end
     else
-      activateApps(apps, focusApp)
+      activateApps(apps, focussedApp)
     end
   end)
 end
 
 --------------------------------------------------
--- Action Resolution
+-- Combo Memorization
 --------------------------------------------------
 
--- Resolves consecutive letter actions into app actions by longest-prefix matching.
-local function resolveLetterActions(actions)
-  local resolved = {}
-  local index = 1
-
-  while index <= #actions do
-    local action = actions[index]
-
-    if action.type ~= ActionType.letter then
-      table.insert(resolved, action)
-      index = index + 1
-    else
-      -- Collect consecutive letters
-      local letters = ""
-      for i = index, #actions do
-        if actions[i].type ~= ActionType.letter then break end
-        letters = letters .. actions[i].id
-      end
-
-      -- Match longest prefix against registered apps
-      local matched = false
-      for tryLength = #letters, 1, -1 do
-        local registration = registeredApps[letters:sub(1, tryLength)]
-        if registration then
-          table.insert(resolved, {
-            id = registration.bundleID,
-            type = ActionType.focusOrLayout,
-            weight = registration.defaultWeight,
-          })
-          index = index + tryLength
-          matched = true
-          break
-        end
-      end
-
-      if not matched then
-        index = index + 1
+-- Returns the memorized combo containing bundleID, or nil.
+local function findCombo(bundleID)
+  for _, combo in ipairs(memorizedCombos) do
+    for _, shorthand in ipairs(combo) do
+      if shorthand.id == bundleID then
+        return combo
       end
     end
   end
-
-  return resolved
 end
 
--- Merges consecutive actions with the same type and ID, summing weights.
-local function mergeConsecutiveActions(actions)
-  if #actions == 0 then return {} end
-
-  local merged = {}
-  local current = {
-    id = actions[1].id,
-    type = actions[1].type,
-    weight = actions[1].weight,
-  }
-
-  for i = 2, #actions do
-    local action = actions[i]
-    local isSameAction = current.type ~= ActionType.split
-      and action.type ~= ActionType.split
-      and action.type .. ":" .. action.id == current.type .. ":" .. current.id
-
-    if isSameAction then
-      current.weight = current.weight + action.weight
-    else
-      table.insert(merged, current)
-      current = { id = action.id, type = action.type, weight = action.weight }
+-- Memorizes a new combo, removing its participants from existing combos.
+local function memorizeCombo(newCombo)
+  local participating = {}
+  for _, shorthand in ipairs(newCombo) do
+    if shorthand.id then
+      participating[shorthand.id] = true
     end
   end
 
-  table.insert(merged, current)
-  return merged
-end
-
--- Merges actions, ensures apps are running, and returns tiles with app references.
-local function buildTiles(actions)
-  local merged = mergeConsecutiveActions(actions)
-
-  local tiles = {}
-  for _, action in ipairs(merged) do
-    if action.type ~= ActionType.split then
-      local app = ensureApp(action.id)
-      if app then
-        table.insert(tiles, { app = app, weight = action.weight })
+  local pruned = {}
+  for _, combo in ipairs(memorizedCombos) do
+    local filtered = {}
+    for _, shorthand in ipairs(combo) do
+      if not shorthand.id or not participating[shorthand.id] then
+        table.insert(filtered, shorthand)
       end
     end
+    if #filtered > 0 then
+      table.insert(pruned, filtered)
+    end
   end
-  return tiles
+
+  table.insert(pruned, newCombo)
+  memorizedCombos = pruned
+end
+
+--------------------------------------------------
+-- App Stack
+--------------------------------------------------
+
+-- Returns the app stack: z-ordered list of bundle IDs from all visible windows (front to back).
+local function appStack()
+  local stack = {}
+  local seen = {}
+  for _, window in ipairs(hs.window.orderedWindows()) do
+    local bundleID = window:application():bundleID()
+    if bundleID and not seen[bundleID] then
+      seen[bundleID] = true
+      table.insert(stack, bundleID)
+    end
+  end
+  return stack
+end
+
+-- Returns the app stack that would result from activating a single app.
+local function appStackAfterActivation(currentStack, bundleID)
+  local result = {}
+  for _, id in ipairs(currentStack) do
+    if id ~= bundleID then
+      table.insert(result, id)
+    end
+  end
+  table.insert(result, 1, bundleID)
+  return result
+end
+
+-- Returns the app stack that would result from activating a combo back to front,
+-- then the focussed app last.
+local function appStackAfterCombo(currentStack, comboBundleIDs, focussedBundleID)
+  local stack = currentStack
+  for i = #comboBundleIDs, 1, -1 do
+    if comboBundleIDs[i] ~= focussedBundleID then
+      stack = appStackAfterActivation(stack, comboBundleIDs[i])
+    end
+  end
+  if focussedBundleID then
+    stack = appStackAfterActivation(stack, focussedBundleID)
+  end
+  return stack
+end
+
+-- Returns whether two app stacks differ.
+local function appStacksDiffer(a, b)
+  if #a ~= #b then return true end
+  for i, id in ipairs(a) do
+    if id ~= b[i] then return true end
+  end
+  return false
+end
+
+--------------------------------------------------
+-- Combo Replay
+--------------------------------------------------
+
+-- Replays a memorized combo from a single-app keystroke on hyper release.
+-- Tiles all combo participants and focuses the triggering app.
+local function replayCombo(combo, bundleID, initialFocusedWindow)
+  -- Collect bundle IDs participating in the combo
+  local comboBundleIDs = {}
+  for _, shorthand in ipairs(combo) do
+    if shorthand.id then
+      table.insert(comboBundleIDs, shorthand.id)
+    end
+  end
+
+  -- Determine whether replaying would change the app stack beyond a simple activation
+  local currentStack = appStack()
+  local needsReorder = appStacksDiffer(
+    appStackAfterCombo(currentStack, comboBundleIDs, bundleID),
+    appStackAfterActivation(currentStack, bundleID)
+  )
+
+  -- Tile the combo with the triggering app focussed
+  local tiles = buildTiles(combo)
+  hs.timer.doAfter(0.1, function()
+    applyTiling(tiles, initialFocusedWindow, {
+      focussedBundleID = bundleID,
+      skipReorder = not needsReorder,
+    })
+  end)
+end
+
+--------------------------------------------------
+-- Combo Building
+--------------------------------------------------
+
+-- Builds a combo while hyper is held (called on each new shorthand).
+-- Single app without prior phase: preactivates for responsiveness.
+-- Combo (repeated keystroke or multiple apps): memorizes and tiles immediately.
+local function updateComboBuilding()
+  local resolved = resolveKeystrokes(shorthandQueue)
+  local mergedShorthands = mergeShorthands(resolved)
+  local tiles = buildTiles(mergedShorthands)
+  local isCombo = #tiles >= 2 or (#tiles == 1 and tiles[1].weight > 1)
+
+  if isCombo then
+    memorizeCombo(mergedShorthands)
+    applyTiling(tiles, buildFocusedWindow)
+    buildPhase = "tiled"
+  elseif #tiles == 1 and not buildPhase then
+    tiles[1].app:activate()
+    buildPhase = "preactivated"
+  end
 end
 
 --------------------------------------------------
 -- Queue Processing
 --------------------------------------------------
 
--- Replays a memorized action sequence, positioning tiles and focusing the target app.
-local function replayActionSequence(actionSequence, bundleID, initialFocusedWindow)
-  local sequenceBundleIDs = {}
-  for _, action in ipairs(actionSequence) do
-    if action.id then
-      table.insert(sequenceBundleIDs, action.id)
-    end
-  end
-
-  -- Determine whether replaying would change z-order beyond a simple activation
-  local currentOrder = bundleIDsByZOrder()
-  local needsReorder = zOrdersDiffer(
-    zOrderAfterActionSequence(currentOrder, sequenceBundleIDs, bundleID),
-    zOrderAfterActivation(currentOrder, bundleID)
-  )
-
-  local tiles = buildTiles(actionSequence)
-
-  hs.timer.doAfter(0.1, function()
-    applyLayout(tiles, initialFocusedWindow, {
-      focusBundleID = bundleID,
-      skipReorder = not needsReorder,
-    })
-  end)
-end
-
--- Resolves the current queue and applies layout eagerly while hyper is held.
--- On first app: preactivates for responsiveness.
--- On repeated shorthand or multiple apps: memorizes action sequence and tiles immediately.
-local function updateEagerLayout()
-  local resolved = resolveLetterActions(actionQueue)
-  local mergedActions = mergeConsecutiveActions(resolved)
-  local tiles = buildTiles(mergedActions)
-  local isActionSequence = #tiles >= 2 or (#tiles == 1 and tiles[1].weight > 1)
-
-  if isActionSequence then
-    -- Action sequence: memorize and layout immediately
-    memorizeActionSequence(mergedActions)
-    applyLayout(tiles, eagerFocusedWindow)
-    eagerPhase = "laid_out"
-  elseif #tiles == 1 and not eagerPhase then
-    -- First app: preactivate
-    tiles[1].app:activate()
-    eagerPhase = "preactivated"
-  end
-end
-
--- Drains the action queue on hyper release or immediate processing.
--- Multi-app layouts are already applied eagerly; only single-app needs handling here.
+-- Processes the shorthand queue on hyper release or immediate (non-hyper) input.
+-- Combos built while held are already tiled; this handles single-app replay or activation.
 local function processQueue()
-  local initialFocusedWindow = eagerFocusedWindow or hs.window.focusedWindow()
-  local wasLaidOut = eagerPhase == "laid_out"
-  eagerPhase = nil
-  eagerFocusedWindow = nil
+  -- Reset combo building session
+  local initialFocusedWindow = buildFocusedWindow or hs.window.focusedWindow()
+  local wasTiled = buildPhase == "tiled"
+  buildFocusedWindow = nil
+  buildPhase = nil
 
-  if #actionQueue == 0 then return end
+  if #shorthandQueue == 0 then return end
 
   -- Snapshot and clear queue
-  local actions = actionQueue
-  actionQueue = {}
+  local shorthands = shorthandQueue
+  shorthandQueue = {}
 
-  -- Multi-app layout was already applied eagerly
-  if wasLaidOut then return end
+  -- Combo was already tiled during combo building
+  if wasTiled then return end
 
-  -- Single app: replay memorized action sequence or activate
-  local resolvedActions = resolveLetterActions(actions)
-  local tiles = buildTiles(resolvedActions)
+  -- Single app: replay its memorized combo if one exists, otherwise just activate
+  local mergedShorthands = mergeShorthands(resolveKeystrokes(shorthands))
+  local tiles = buildTiles(mergedShorthands)
 
   if #tiles == 1 then
     local bundleID = tiles[1].app:bundleID()
-    local actionSequence = findActionSequence(bundleID)
+    local combo = findCombo(bundleID)
 
-    if actionSequence then
-      replayActionSequence(actionSequence, bundleID, initialFocusedWindow)
+    if combo then
+      replayCombo(combo, bundleID, initialFocusedWindow)
     else
       hs.timer.doAfter(0.1, function()
         tiles[1].app:activate(true)
@@ -528,16 +541,17 @@ local function processQueue()
   end
 end
 
--- Appends an action and applies eagerly while hyper is held, or processes on release.
-local function enqueueAction(action)
-  table.insert(actionQueue, action)
+-- Appends a shorthand to the queue. While hyper is held, builds the combo.
+-- On release (or without hyper), drains the queue via processQueue.
+local function enqueueShorthand(shorthand)
+  table.insert(shorthandQueue, shorthand)
 
   if isHyperHeld() then
     hyperkey.startPolling()
-    if not eagerFocusedWindow then
-      eagerFocusedWindow = hs.window.focusedWindow()
+    if not buildFocusedWindow then
+      buildFocusedWindow = hs.window.focusedWindow()
     end
-    updateEagerLayout()
+    updateComboBuilding()
   else
     processQueue()
   end
@@ -549,7 +563,7 @@ end
 
 local M = {}
 
---- Registers an app shortcut for multi-letter tiling activation.
+--- Registers an app shortcut for multi-keystroke tiling activation.
 --- Each letter in the shortcut is bound as a hyper hotkey.
 function M.registerApp(shortcut, bundleID, defaultWeight)
   registeredApps[shortcut] = { bundleID = bundleID, defaultWeight = defaultWeight or 1 }
@@ -557,21 +571,21 @@ function M.registerApp(shortcut, bundleID, defaultWeight)
   for i = 1, #shortcut do
     local letter = shortcut:sub(i, i)
 
-    if not registeredLetters[letter] then
-      registeredLetters[letter] = true
+    if not registeredKeystrokes[letter] then
+      registeredKeystrokes[letter] = true
 
       hs.hotkey.bind(HYPER_MODIFIERS, letter, function()
-        enqueueAction({ id = letter, type = ActionType.letter, weight = 1 })
+        enqueueShorthand({ id = letter, type = ShorthandType.keystroke, weight = 1 })
       end)
     end
   end
 end
 
---- Binds a hyper key to insert a split action into the queue.
---- Splits prevent merging of adjacent app actions.
+--- Binds a hyper key to insert a split shorthand into the queue.
+--- Splits prevent merging of adjacent app shorthands.
 function M.setSplitKey(key)
   hs.hotkey.bind(HYPER_MODIFIERS, key, function()
-    enqueueAction({ id = nil, type = ActionType.split, weight = 1 })
+    enqueueShorthand({ id = nil, type = ShorthandType.split, weight = 1 })
   end)
 end
 
