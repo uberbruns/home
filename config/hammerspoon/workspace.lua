@@ -62,7 +62,7 @@ local HYPER_MODIFIERS = {"cmd", "alt", "ctrl", "shift"}
 
 local ShorthandType = {
   app = "app",
-  keystroke = "keystroke",
+  unresolved = "unresolved",
   split = "split",
 }
 
@@ -105,7 +105,7 @@ local function activateApps(apps, focussedApp)
 end
 
 -- Returns the app for a bundle ID, launching it if not running.
-local function ensureApp(bundleID)
+local function launchOrGetApp(bundleID)
   local app = hs.application.get(bundleID)
   if not app then
     hs.application.launchOrFocusByBundleID(bundleID)
@@ -135,22 +135,23 @@ end
 -- Shorthand Resolution
 --------------------------------------------------
 
--- Resolves consecutive keystroke shorthands into app shorthands by longest-prefix matching.
-local function resolveKeystrokes(shorthands)
+-- Resolves consecutive unresolved shorthands into app shorthands by longest-prefix matching.
+-- Splits pass through unchanged since they are already resolved.
+local function resolveShorthands(shorthands)
   local resolved = {}
   local index = 1
 
   while index <= #shorthands do
     local shorthand = shorthands[index]
 
-    if shorthand.type ~= ShorthandType.keystroke then
+    if shorthand.type ~= ShorthandType.unresolved then
       table.insert(resolved, shorthand)
       index = index + 1
     else
       -- Collect consecutive keystrokes
       local letters = ""
       for i = index, #shorthands do
-        if shorthands[i].type ~= ShorthandType.keystroke then break end
+        if shorthands[i].type ~= ShorthandType.unresolved then break end
         letters = letters .. shorthands[i].id
       end
 
@@ -209,12 +210,16 @@ local function mergeShorthands(shorthands)
   return merged
 end
 
+--------------------------------------------------
+-- Tiling
+--------------------------------------------------
+
 -- Converts merged shorthands into tiles, launching apps as needed.
 local function buildTiles(mergedShorthands)
   local tiles = {}
   for _, shorthand in ipairs(mergedShorthands) do
     if shorthand.type ~= ShorthandType.split then
-      local app = ensureApp(shorthand.id)
+      local app = launchOrGetApp(shorthand.id)
       if app then
         table.insert(tiles, { app = app, weight = shorthand.weight })
       end
@@ -222,10 +227,6 @@ local function buildTiles(mergedShorthands)
   end
   return tiles
 end
-
---------------------------------------------------
--- Tiling
---------------------------------------------------
 
 -- Distributes each app's standard windows across its tiles (last tile gets remaining).
 local function assignWindowsToTiles(tiles)
@@ -497,11 +498,11 @@ end
 -- Combo Building
 --------------------------------------------------
 
--- Builds a combo while hyper is held (called on each new shorthand).
+-- Builds a combo while hyper is held (called on each new input).
 -- Single app without prior phase: preactivates for responsiveness.
 -- Combo (repeated keystroke or multiple apps): memorizes and tiles immediately.
 local function updateComboBuilding()
-  local resolved = resolveKeystrokes(shorthandQueue)
+  local resolved = resolveShorthands(shorthandQueue)
   local mergedShorthands = mergeShorthands(resolved)
   local tiles = buildTiles(mergedShorthands)
   local isCombo = #tiles >= 2 or (#tiles == 1 and tiles[1].weight > 1)
@@ -539,7 +540,7 @@ local function processQueue()
   if wasTiled then return end
 
   -- Single app: cycle windows if already focused, replay combo, or activate
-  local mergedShorthands = mergeShorthands(resolveKeystrokes(shorthands))
+  local mergedShorthands = mergeShorthands(resolveShorthands(shorthands))
   local tiles = buildTiles(mergedShorthands)
 
   if #tiles == 1 then
@@ -562,8 +563,9 @@ local function processQueue()
   end
 end
 
--- Appends a shorthand to the queue. While hyper is held, builds the combo.
--- On release (or without hyper), drains the queue via processQueue.
+-- Appends a shorthand (unresolved or split) to the queue. While hyper is
+-- held, the system builds the combo. On release (or without hyper), the
+-- system drains the queue via processQueue.
 local function enqueueShorthand(shorthand)
   table.insert(shorthandQueue, shorthand)
 
@@ -596,13 +598,13 @@ function M.registerApp(shortcut, bundleID, defaultWeight)
       registeredKeystrokes[letter] = true
 
       hs.hotkey.bind(HYPER_MODIFIERS, letter, function()
-        enqueueShorthand({ id = letter, type = ShorthandType.keystroke, weight = 1 })
+        enqueueShorthand({ id = letter, type = ShorthandType.unresolved, weight = 1 })
       end)
     end
   end
 end
 
---- Binds a hyper key to insert a split shorthand into the queue.
+--- Binds a hyper key to insert a split into the shorthand queue.
 --- Splits prevent merging of adjacent app shorthands.
 function M.setSplitKey(key)
   hs.hotkey.bind(HYPER_MODIFIERS, key, function()
