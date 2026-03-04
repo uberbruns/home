@@ -1,9 +1,10 @@
 # Writing Rules
 
-- Every sentence and bullet point MUST have an explicit subject, verb, and object. Avoid subjectless fragments like "Drops empty tiles" — write "The system drops empty tiles" instead.
+- Every sentence and bullet point SHOULD have an explicit subject, verb, and object. Avoid subjectless fragments like "Drops empty tiles" — write "The system drops empty tiles" instead.
 - Expand telegraphic phrases into full sentences. Replace shorthand like "Target screen: A > B > C" with prose like "The system selects the target screen from A, falling back to B, then C."
 - Break compound bullet points into separate sentences when they describe distinct actions.
 - Add articles ("a", "the") to noun phrases in definitions and descriptions.
+- Do not shy away from words like "because" or "with this in mind" that help readers follow complex reasoning.
 
 # Naming Conventions
 

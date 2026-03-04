@@ -13,6 +13,16 @@ Apply each item systematically.
 - [ ] Use correct terminology that beginners can learn and experts expect
 - [ ] Be brief without degrading readability; retain connecting words and transitions when complex reasoning requires them
 
+### Length
+
+- [ ] Be brief by sticking to essential information. Respect the readers time
+- [ ] Ensure every sentence and bullet point has an explicit subject, verb, and object
+- [ ] Avoid subjectless fragments
+- [ ] Expand telegraphic phrases into full sentences
+- [ ] Break compound bullet points into separate sentences when they describe distinct actions
+- [ ] Add articles ("a", "the") to noun phrases in definitions and descriptions
+- [ ] Do not shy away from words like "because" or "with this in mind" that help readers follow complex reasoning
+
 ### Language to Avoid
 
 - [ ] Eliminate hedging language ("perhaps", "maybe", "it might be")

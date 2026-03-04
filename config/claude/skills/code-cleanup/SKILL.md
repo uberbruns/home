@@ -24,7 +24,6 @@ Apply each item systematically.
         - [ ] Minimize both the number of stateful objects and the amount of state each one manages
     - [ ] Use stateless objects for data modeling and isolated functionality with no meaningful lifecycle
     - [ ] Use enumerations for mutually exclusive state, minimizing the number of representable states
-- [ ] Eliminate conditional logic when the input data is statically known and can be shaped to remove unnecessary branching
 - [ ] Pass a context object along the call chain instead of re-fetching data already available at an earlier stage
 - [ ] Prefer computed properties over cached or recomputed values when the computation is pure
 - [ ] Object methods should access state via properties, not through redundant arguments
@@ -33,6 +32,8 @@ Apply each item systematically.
 ### Function Body
 
 - [ ] Check preconditions first; avoid mid-body returns
+- [ ] Eliminate conditional logic when the input data is statically known and can be shaped to remove unnecessary branching
+- [ ] Conditional logic should handle the expected path first
 - [ ] Add one-line subheader comments describing each block's purpose
 - [ ] Order operations leaf-first, building up to the final root transformation or return value
 - [ ] Alphabetically order sequential accesses to properties of the same object when order is irrelevant
@@ -49,21 +50,23 @@ Apply each item systematically.
 
 ### Naming
 
-- [ ] **Consistency** - Same concept uses same name (or name variant) across function flow; avoid synonyms
+- [ ] **Consistency** - Use the same name for identical concepts throughout the code; avoid synonyms (e.g., choose `path`, `directory`, or `folder` and use consistently rather than mixing them)
 - [ ] **Variables** - Specific, unabbreviated names that communicate purpose without extra context
-- [ ] **Functions** - Name and purpose match and are easy to grasp
+- [ ] **Functions** - Name matches purposes and implementation in body
 - [ ] **Specificity** - Prefer precise terms over generic ones; derive from symbol/function docs
+- [ ] **Length** - Names should be long enough to be unambiguous and short enough to be scannable; the right name feels obvious in retrospect. Err on the side of too long rather than too short.
 - [ ] **Weight** - Reserve generic verbs (`get`, `set`) for lightweight accessors; use more descriptive verbs (`discover`, `compute`, `load`) for non-trivial operations
-- [ ] **Symmetry** - Similarly purposed functions may share leading terms
+- [ ] **Symmetry** - Similarly purposed functions may share leading or trailing terms
 - [ ] **Object pattern** - `<adjective>?` + `<noun>` (e.g. `User`, `CachedTokenProvider`)
 - [ ] **Function pattern** - `<verb>` + `<adjective>?` + `<noun>` + `<context>?` (e.g. `fetchActiveUsers`, `validateInputFormat`, `buildNavigationStack`)
 - [ ] **State pattern** - `<gerund/noun>` + `<verb (past-tense)>` + `<context>?` (e.g. `loadingFinished`, `connectionEstablished`, `dataSynchronized`)
 - [ ] **Boolean pattern** - `is` or `are` + `<adjective>?` + `<noun>` OR `<verb (3rd person present)>` + `<noun>` (e.g. `isLoading`, `isActive`, `areItemsAvailable`, `contains`, `hasItems`, `exists`)
 - [ ] **Language conventions** - Adhere to language naming standards and idioms
+- [ ] **Reduce Ambiguity** - Avoid overloading terms from related technologies; reserve domain-specific terminology for its intended context (e.g., reserve `request` and `response` exclusively for HTTP operations when using an HTTP API)
 
 ### File Structure
 
-- [ ] Order: Imports > Configuration > Implementation > Exports/Main Invocation
+- [ ] Order: Imports > Header Docs > Configuration > Implementation > Exports/Main Invocation
 
 ### Implementation
 
@@ -71,7 +74,7 @@ Apply each item systematically.
 - [ ] Lifecycle (init, setup, teardown)
 - [ ] Entry points (public API, handlers)
 - [ ] Implementation details (core logic, grouped by context/data structure operated on)
-- [ ] Supporting code (helpers, utilities, formatters, validators)
+- [ ] Supporting code (helpers, utilities, formatters, validators, private extensions and models)
 - [ ] Alphabetical order within each section for equal-level symbols
 
 ### Section Separators
