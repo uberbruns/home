@@ -9,7 +9,11 @@ local M = {}
 
 local isDown = false
 local releaseCallbacks = {}
+local releaseCount = 0           -- consecutive polls without hyper pressed
 local pollTimer = nil
+
+local RELEASE_THRESHOLD = 3      -- require 3 consecutive non-hyper polls (~100ms at 30Hz)
+local SETTLE_DELAY = 0.05        -- seconds to wait after release before notifying
 
 --------------------------------------------------
 -- Implementation
@@ -36,10 +40,18 @@ end
 
 local function pollHyperState()
   if isHyperPressed() then
+    if not isDown then
+      print("[hyperkey] down")
+    end
     isDown = true
+    releaseCount = 0
   else
-    if isDown then notifyRelease() end
-    stopPolling()
+    releaseCount = releaseCount + 1
+    if isDown and releaseCount >= RELEASE_THRESHOLD then
+      print("[hyperkey] up (after " .. releaseCount .. " polls)")
+      stopPolling()
+      hs.timer.doAfter(SETTLE_DELAY, notifyRelease)
+    end
   end
 end
 
@@ -55,7 +67,9 @@ end
 --- Begins polling modifier state at 30 Hz with a 5-second safety timeout.
 function M.startPolling()
   if pollTimer then return end
+  print("[hyperkey] startPolling")
   isDown = true
+  releaseCount = 0
   pollTimer = hs.timer.doEvery(1/30, pollHyperState)
   hs.timer.doAfter(5, function()
     if not pollTimer then return end
