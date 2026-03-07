@@ -94,6 +94,10 @@ source = "externals/daltonmenezes/aura-theme/packages/xcode/Aura Soft Dark.xccol
 target = "~/Library/Developer/Xcode/UserData/FontAndColorThemes/Favorite.xccolortheme"
 labels = ["macos", "dev-apple"]
 
+[open-scad]
+target = "~/Documents/OpenSCAD"
+labels = ["making"]
+
 [test]
 target = "~/.test"
 labels = ["test"]
