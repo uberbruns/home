@@ -382,7 +382,8 @@ local function applyTiling(ctx)
     return
   end
 
-  local finallyFocusedApp = resolveFinallyFocusedApp(tilesWithWindows, ctx.initialFocusedWindow, ctx.finallyFocusedBundleID)
+  local finallyFocusedApp = resolveFinallyFocusedApp(tilesWithWindows, ctx.initialFocusedWindow,
+    ctx.finallyFocusedBundleID)
 
   -- Log tile assignments
   for i, tile in ipairs(tilesWithWindows) do
@@ -525,8 +526,8 @@ local function replayCombo(ctx)
   local tiles = buildTiles(prunedCombo)
   log("replayCombo: → tiling " .. #tiles .. " tiles, focused=" .. appName(ctx.highlightedBundleID))
   applyTiling({
-    tiles                = tiles,
-    initialFocusedWindow = ctx.initialFocusedWindow,
+    tiles                  = tiles,
+    initialFocusedWindow   = ctx.initialFocusedWindow,
     finallyFocusedBundleID = ctx.highlightedBundleID,
   })
 end
@@ -560,18 +561,18 @@ local function buildProcessContext(shorthands, initialFocusedWindow)
   local highlightedAppCombo, highlightedAppComboIndex = findComboForBundle(highlightedBundleID)
 
   return {
-    initialFocusedWindow           = initialFocusedWindow,
-    initialFocusedBundleID        = initialFocusedWindow and initialFocusedWindow:application():bundleID() or nil,
-    shorthands                     = mergedShorthands,
-    tiles                          = tiles,
-    isCombo                        = isCombo,
-    isHighlight                    = highlightedApp ~= nil,
-    highlightedApp                 = highlightedApp,
-    highlightedBundleID            = highlightedBundleID,
-    isHighlightInCurrentCombo      = highlightedBundleID and currentCombo and
-      collectBundleIDs(currentCombo)[highlightedBundleID] or false,
-    highlightedAppCombo            = highlightedAppCombo,
-    highlightedAppComboIndex       = highlightedAppComboIndex,
+    initialFocusedWindow      = initialFocusedWindow,
+    initialFocusedBundleID    = initialFocusedWindow and initialFocusedWindow:application():bundleID() or nil,
+    shorthands                = mergedShorthands,
+    tiles                     = tiles,
+    isCombo                   = isCombo,
+    isHighlight               = highlightedApp ~= nil,
+    highlightedApp            = highlightedApp,
+    highlightedBundleID       = highlightedBundleID,
+    isHighlightInCurrentCombo = highlightedBundleID and currentCombo and
+        collectBundleIDs(currentCombo)[highlightedBundleID] or false,
+    highlightedAppCombo       = highlightedAppCombo,
+    highlightedAppComboIndex  = highlightedAppComboIndex,
   }
 end
 
