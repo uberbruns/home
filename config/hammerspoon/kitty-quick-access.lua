@@ -131,7 +131,9 @@ function SuppressQuickAccessAutoHide()
 end
 
 hs.hotkey.bind({"cmd"}, "space", function()
-  local app = hs.application.get(APP_NAME)
+  print("[kitty-quick-access] cmd+space triggered")
+  local _app = hs.application.get(APP_NAME)
+  local app = (_app and (_app:path() or ""):find("kitty", 1, true)) and _app or nil
 
   -- Toggle off when panel is focused
   if app and app:isFrontmost() then
@@ -147,13 +149,19 @@ hs.hotkey.bind({"cmd"}, "space", function()
   CaptureSelectionForPicker()
 
   -- Reactivate existing panel or cold-start a new one
+  print("[kitty-quick-access] app=" .. tostring(app) .. " isFrontmost=" .. tostring(app and app:isFrontmost()))
   if app then
+    print("[kitty-quick-access] reactivating existing panel")
     moveToTargetScreen(app)
     app:activate()
   else
-    hs.task.new("/opt/homebrew/bin/kitten", nil, {
-      "quick-access-terminal", os.getenv("HOME"),
-    }):start()
+    print("[kitty-quick-access] cold-starting kitten quick-access-terminal")
+    local task = hs.task.new("/opt/homebrew/bin/kitten", function(exitCode, stdout, stderr)
+      print("[kitty-quick-access] kitten exited: code=" .. tostring(exitCode)
+        .. " stdout=" .. tostring(stdout) .. " stderr=" .. tostring(stderr))
+    end, {"quick-access-terminal", os.getenv("HOME")})
+    local ok = task:start()
+    print("[kitty-quick-access] task:start()=" .. tostring(ok))
   end
 end)
 
