@@ -13,7 +13,7 @@
   On hyper release with a combo (multiple apps or repeated shorthand):
   - The system memorizes the combo and tiles all participants.
   - Windows are raised back to front to establish z-order, with the
-    focused app receiving keyboard input.
+    finally focused app receiving keyboard input.
 
   On hyper release with a single shorthand:
   - If the app belongs to the current combo, the system activates
@@ -22,19 +22,19 @@
     the system replays that combo — pruning any apps no longer in
     the app stack before tiling.
   - If the app is a peer in another memorized combo (priority 2),
-    the system replays that combo with focus on the triggering app.
+    the system replays that combo with the triggering app finally focused.
   - If the most-front app matches the shorthand, the system cycles
     through its windows by focusing the backmost one.
   - Otherwise the system activates the app without tiling.
 
   Tiling layout:
   - The system selects the target screen from the leader app's main
-    window, falling back to the focused window, then the main screen.
+    window, falling back to the initially focused window, then the main screen.
   - Each tile receives one of its app's windows. The last tile for
     each app collects any remaining windows.
   - The system drops tiles whose app has no available windows.
   - The system positions tiles left to right, then raises windows
-    back to front. Only the focused app receives keyboard input.
+    back to front. Only the finally focused app receives keyboard input.
   - Focus returns to the initially focused window if it was tiled.
     Otherwise the leader app receives focus.
 
@@ -62,7 +62,7 @@ local hyperkey = require("hyperkey")
 -- Configuration
 --------------------------------------------------
 
-local HYPER_MODIFIERS = {"cmd", "alt", "ctrl", "shift"}
+local HYPER_MODIFIERS = { "cmd", "alt", "ctrl", "shift" }
 
 local ShorthandType = {
   app = "app",
@@ -111,9 +111,9 @@ end
 -- State
 --------------------------------------------------
 
-local buildFocusedWindow = nil   -- focused window captured at start of combo building
-local comboStack = {}            -- ordered list of memorized combos (most recent last)
-local currentCombo = nil         -- the most recently tiled or replayed combo
+local buildFocusedWindow = nil -- focused window captured at start of combo building
+local comboStack = {}          -- ordered list of memorized combos (most recent last)
+local currentCombo = nil       -- the most recently tiled or replayed combo
 local registeredApps = {}
 local registeredKeystrokes = {}
 local shorthandQueue = {}
@@ -137,14 +137,14 @@ local function appStack()
 end
 
 -- Cycles through an app's windows by focusing its backmost window.
-local function cycleWindows(app)
+local function cycleWindows(ctx)
   local appWindows = {}
   for _, window in ipairs(hs.window.orderedWindows()) do
-    if window:application() == app then
+    if window:application() == ctx.highlightedApp then
       table.insert(appWindows, window)
     end
   end
-  log("cycleWindows: " .. appName(app:bundleID()) .. " windows=" .. windowListDesc(appWindows))
+  log("cycleWindows: " .. appName(ctx.highlightedApp:bundleID()) .. " windows=" .. windowListDesc(appWindows))
   if #appWindows > 1 then
     log("cycleWindows: focusing backmost " .. windowDesc(appWindows[#appWindows]))
     appWindows[#appWindows]:focus()
@@ -227,9 +227,9 @@ local function mergeShorthands(shorthands)
   for i = 2, #shorthands do
     local shorthand = shorthands[i]
     local isMergeable = current.type ~= ShorthandType.split
-      and shorthand.type ~= ShorthandType.split
-      and shorthand.type == current.type
-      and shorthand.id == current.id
+        and shorthand.type ~= ShorthandType.split
+        and shorthand.type == current.type
+        and shorthand.id == current.id
 
     if isMergeable then
       current.weight = current.weight + shorthand.weight
@@ -334,21 +334,21 @@ local function positionTiles(screenFrame, tiles)
   end
 end
 
--- Resolves which app should receive focus after tiling.
-local function resolveFocusedApp(tiles, initialFocusedWindow, focusedBundleID)
+-- Resolves which app should be finally focused after tiling.
+local function resolveFinallyFocusedApp(tiles, initialFocusedWindow, finallyFocusedBundleID)
   -- Explicit target: find the matching app
-  if focusedBundleID then
+  if finallyFocusedBundleID then
     for _, tile in ipairs(tiles) do
-      if tile.app:bundleID() == focusedBundleID then
+      if tile.app:bundleID() == finallyFocusedBundleID then
         return tile.app
       end
     end
   end
 
   -- Default: first app that differs from the initially focused one
-  local initialBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID()
+  local initialFocusedBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID()
   for _, tile in ipairs(tiles) do
-    if tile.app:bundleID() ~= initialBundleID then
+    if tile.app:bundleID() ~= initialFocusedBundleID then
       return tile.app
     end
   end
@@ -357,64 +357,57 @@ local function resolveFocusedApp(tiles, initialFocusedWindow, focusedBundleID)
   if #tiles > 0 then return tiles[1].app end
 end
 
--- Resolves the target screen from tiles or falls back to focused/main screen.
+-- Resolves the target screen from tiles or falls back to the currently focused/main screen.
 local function resolveTargetScreen(tiles)
   if #tiles > 0 then
     local mainWindow = tiles[1].app:mainWindow()
     if mainWindow then return mainWindow:screen() end
   end
 
-  local focusedWindow = hs.window.focusedWindow()
-  if focusedWindow then return focusedWindow:screen() end
+  local currentlyFocusedWindow = hs.window.focusedWindow()
+  if currentlyFocusedWindow then return currentlyFocusedWindow:screen() end
 
   return hs.screen.mainScreen()
 end
 
 -- Assigns windows to tiles and positions them proportionally on the target screen.
--- Focuses windows back to front to establish z-order.
-local function applyTiling(tiles, initialFocusedWindow, opts)
-  local targetScreen = resolveTargetScreen(tiles)
+-- Activates apps from last to leader; the finally focused app activates last.
+local function applyTiling(ctx)
+  local targetScreen = resolveTargetScreen(ctx.tiles)
   local screenFrame = targetScreen:frame()
 
-  local tilesWithWindows = assignWindowsToTiles(tiles)
+  local tilesWithWindows = assignWindowsToTiles(ctx.tiles)
   if #tilesWithWindows == 0 then
     log("applyTiling: no tiles with windows")
     return
   end
 
-  local focusedBundleID = opts and opts.focusedBundleID
-  local focusedApp = resolveFocusedApp(tilesWithWindows, initialFocusedWindow, focusedBundleID)
+  local finallyFocusedApp = resolveFinallyFocusedApp(tilesWithWindows, ctx.initialFocusedWindow, ctx.finallyFocusedBundleID)
 
   -- Log tile assignments
   for i, tile in ipairs(tilesWithWindows) do
     log("applyTiling: tile " .. i .. " " .. appName(tile.app:bundleID())
       .. " weight=" .. tile.weight .. " windows=" .. windowListDesc(tile.windows))
   end
-  log("applyTiling: focusedApp=" .. (focusedApp and appName(focusedApp:bundleID()) or "nil")
-    .. " initialFocusedWindow=" .. windowDesc(initialFocusedWindow))
+  log("applyTiling: finallyFocusedApp=" .. (finallyFocusedApp and appName(finallyFocusedApp:bundleID()) or "nil")
+    .. " initialFocusedWindow=" .. windowDesc(ctx.initialFocusedWindow))
 
   -- Position windows in their tile frames
   positionTiles(screenFrame, tilesWithWindows)
 
-  -- Focus windows back to front to establish z-order; the focused app's
-  -- windows are focused last so they end up on top with keyboard input.
-  local focusedTiles = {}
+  -- Activate apps from last to leader to establish z-order; the finally focused app
+  -- activates last so it ends up on top with keyboard input.
   for i = #tilesWithWindows, 1, -1 do
     local tile = tilesWithWindows[i]
-    if focusedApp and tile.app:bundleID() == focusedApp:bundleID() then
-      table.insert(focusedTiles, tile)
-    else
-      for _, window in ipairs(tile.windows) do
-        log("applyTiling: focusing " .. windowDesc(window))
-        window:focus()
-      end
+    if not finallyFocusedApp or tile.app:bundleID() ~= finallyFocusedApp:bundleID() then
+      log("applyTiling: activating " .. appName(tile.app:bundleID()))
+      tile.app:activate(true)
+      hs.timer.usleep(16000 * 3)
     end
   end
-  for _, tile in ipairs(focusedTiles) do
-    for _, window in ipairs(tile.windows) do
-      log("applyTiling: focusing " .. windowDesc(window))
-      window:focus()
-    end
+  if finallyFocusedApp then
+    log("applyTiling: finally activating " .. appName(finallyFocusedApp:bundleID()))
+    finallyFocusedApp:activate(true)
   end
 end
 
@@ -443,8 +436,8 @@ local function collectBundleIDs(combo)
 end
 
 -- Pushes a combo onto the stack, removing any existing combo with the same leader.
-local function memorizeCombo(newCombo)
-  local leader = leaderBundleID(newCombo)
+local function memorizeCombo(ctx)
+  local leader = leaderBundleID(ctx.shorthands)
   if not leader then return end
 
   -- Prune existing combos with the same leader
@@ -455,7 +448,7 @@ local function memorizeCombo(newCombo)
     end
   end
 
-  table.insert(pruned, newCombo)
+  table.insert(pruned, ctx.shorthands)
   comboStack = pruned
 end
 
@@ -486,9 +479,9 @@ end
 -- Replays a memorized combo from a single-app keystroke on hyper release.
 -- Tiles all combo participants and focuses the triggering app.
 -- Prunes apps that are no longer present in the app stack.
-local function replayCombo(stackIndex, bundleID, initialFocusedWindow)
-  local combo = comboStack[stackIndex]
-  log("replayCombo: bundleID=" .. appName(bundleID)
+local function replayCombo(ctx)
+  local combo = comboStack[ctx.highlightedAppComboIndex]
+  log("replayCombo: bundleID=" .. appName(ctx.highlightedBundleID)
     .. " combo=[" .. shorthandListDesc(combo) .. "]")
 
   -- Prune apps no longer in the app stack (always keep the triggering app)
@@ -498,7 +491,7 @@ local function replayCombo(stackIndex, bundleID, initialFocusedWindow)
 
   local prunedCombo = {}
   for _, shorthand in ipairs(combo) do
-    if shorthand.type == ShorthandType.split or shorthand.id == bundleID or stackSet[shorthand.id] then
+    if shorthand.type == ShorthandType.split or shorthand.id == ctx.highlightedBundleID or stackSet[shorthand.id] then
       table.insert(prunedCombo, shorthand)
     end
   end
@@ -513,16 +506,16 @@ local function replayCombo(stackIndex, bundleID, initialFocusedWindow)
 
   -- Update or remove the combo from the stack
   if appCount >= 2 then
-    comboStack[stackIndex] = prunedCombo
+    comboStack[ctx.highlightedAppComboIndex] = prunedCombo
   else
-    table.remove(comboStack, stackIndex)
+    table.remove(comboStack, ctx.highlightedAppComboIndex)
     log("replayCombo: removed combo from stack")
   end
 
   -- Fall back to simple activation if the combo is no longer meaningful
   if appCount < 2 then
-    log("replayCombo: → fallback activate " .. appName(bundleID))
-    local app = launchOrGetApp(bundleID)
+    log("replayCombo: → fallback activate " .. appName(ctx.highlightedBundleID))
+    local app = launchOrGetApp(ctx.highlightedBundleID)
     if app then app:activate(true) end
     return
   end
@@ -530,9 +523,11 @@ local function replayCombo(stackIndex, bundleID, initialFocusedWindow)
   -- Tile the combo with focus on the triggering app
   currentCombo = prunedCombo
   local tiles = buildTiles(prunedCombo)
-  log("replayCombo: → tiling " .. #tiles .. " tiles, focused=" .. appName(bundleID))
-  applyTiling(tiles, initialFocusedWindow, {
-    focusedBundleID = bundleID,
+  log("replayCombo: → tiling " .. #tiles .. " tiles, focused=" .. appName(ctx.highlightedBundleID))
+  applyTiling({
+    tiles                = tiles,
+    initialFocusedWindow = ctx.initialFocusedWindow,
+    finallyFocusedBundleID = ctx.highlightedBundleID,
   })
 end
 
@@ -540,81 +535,135 @@ end
 -- Queue Processing
 --------------------------------------------------
 
+-- Resolves the shorthand queue and the initially focused window into a context
+-- that captures all facts needed to decide what action to perform.
+--
+-- Fields:
+--   initialFocusedWindow  — the window that held focus when the first shorthand was enqueued
+--   initialFocusedBundleID — the bundle ID of the initially focused window's application, or nil
+--   shorthands            — the resolved and merged shorthand list
+--   tiles                 — the tiles built from the shorthands
+--   isCombo               — true when the shorthands produce two or more tiles, or one weighted tile
+--   isHighlight                    — true when the shorthands resolve to a single app to highlight
+--   highlightedApp                 — the app to highlight when isHighlight is true, otherwise nil
+--   highlightedBundleID            — the bundle ID of highlightedApp, or nil
+--   isHighlightInCurrentCombo      — true when highlightedApp belongs to the most recently tiled combo
+--   highlightedAppCombo            — the memorized combo containing highlightedApp, or nil
+--   highlightedAppComboIndex       — the index of highlightedAppCombo in the combo stack, or nil
+local function buildProcessContext(shorthands, initialFocusedWindow)
+  local mergedShorthands = mergeShorthands(resolveShorthands(shorthands))
+  local tiles = buildTiles(mergedShorthands)
+  local isCombo = #tiles >= 2 or (#tiles == 1 and tiles[1].weight > 1)
+  local highlightedApp = nil
+  if not isCombo and #tiles == 1 then highlightedApp = tiles[1].app end
+  local highlightedBundleID = highlightedApp and highlightedApp:bundleID() or nil
+  local highlightedAppCombo, highlightedAppComboIndex = findComboForBundle(highlightedBundleID)
+
+  return {
+    initialFocusedWindow           = initialFocusedWindow,
+    initialFocusedBundleID        = initialFocusedWindow and initialFocusedWindow:application():bundleID() or nil,
+    shorthands                     = mergedShorthands,
+    tiles                          = tiles,
+    isCombo                        = isCombo,
+    isHighlight                    = highlightedApp ~= nil,
+    highlightedApp                 = highlightedApp,
+    highlightedBundleID            = highlightedBundleID,
+    isHighlightInCurrentCombo      = highlightedBundleID and currentCombo and
+      collectBundleIDs(currentCombo)[highlightedBundleID] or false,
+    highlightedAppCombo            = highlightedAppCombo,
+    highlightedAppComboIndex       = highlightedAppComboIndex,
+  }
+end
+
+-- Cycles through the highlighted app's windows when it is already focused.
+-- The system restores the combo because the user is staying within it.
+local function highlightFocusedAppInCurrentCombo(ctx)
+  currentCombo = ctx.highlightedAppCombo
+  cycleWindows(ctx)
+end
+
+-- Activates the highlighted app when it is not yet focused, without retiling.
+-- The system restores the combo because the user is moving between its apps.
+local function highlightUnfocusedAppInCurrentCombo(ctx)
+  currentCombo = ctx.highlightedAppCombo
+  ctx.highlightedApp:activate(true)
+end
+
+-- Highlights the app by replaying its memorized combo, pruning stale members.
+local function highlightAppInMemorizedCombo(ctx)
+  replayCombo(ctx)
+end
+
+-- Highlights the app by cycling its windows, raising the backmost one.
+local function cycleAppWindows(ctx)
+  cycleWindows(ctx)
+end
+
+-- Highlights the app by bringing it to the foreground without tiling.
+local function activateApp(ctx)
+  ctx.highlightedApp:activate(true)
+end
+
+-- Highlights an app: focuses it within the current combo, replays a memorized
+-- combo, cycles its windows, or activates it directly.
+local function highlightApp(ctx)
+  if ctx.isHighlightInCurrentCombo then
+    if ctx.highlightedBundleID == ctx.initialFocusedBundleID then
+      log("highlightApp: → cycle windows in current combo")
+      highlightFocusedAppInCurrentCombo(ctx)
+    else
+      log("highlightApp: → activate unfocused app in current combo")
+      highlightUnfocusedAppInCurrentCombo(ctx)
+    end
+  elseif ctx.highlightedAppCombo then
+    log("highlightApp: → replay memorized combo")
+    highlightAppInMemorizedCombo(ctx)
+  elseif ctx.highlightedBundleID == ctx.initialFocusedBundleID then
+    log("highlightApp: → cycle app windows")
+    cycleAppWindows(ctx)
+  else
+    log("highlightApp: → activate app")
+    activateApp(ctx)
+  end
+end
+
 -- Processes the shorthand queue on hyper release or immediate (non-hyper) input.
--- Handles combos (memorize + tile), single-app replay, window cycling, and activation.
+-- Handles combos (memorize + tile), single-app highlighting, window cycling, and activation.
 local function processQueue()
   local initialFocusedWindow = buildFocusedWindow or hs.window.focusedWindow()
   buildFocusedWindow = nil
 
-  log("processQueue: queueSize=" .. #shorthandQueue
-    .. " initialFocusedWindow=" .. windowDesc(initialFocusedWindow))
+  if #shorthandQueue == 0 then return end
 
-  if #shorthandQueue == 0 then
-    log("processQueue: → empty queue")
-    return
+  -- Invalidate the current combo if the initially focused app is no longer a member.
+  if currentCombo then
+    local initialBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID()
+    if not initialBundleID or not collectBundleIDs(currentCombo)[initialBundleID] then
+      currentCombo = nil
+    end
   end
 
-  -- Snapshot and clear queue
+  -- Snapshot and clear queue, then build the context for this activation.
   local shorthands = shorthandQueue
   shorthandQueue = {}
+  local ctx = buildProcessContext(shorthands, initialFocusedWindow)
+  currentCombo = nil
 
-  local mergedShorthands = mergeShorthands(resolveShorthands(shorthands))
-  local tiles = buildTiles(mergedShorthands)
-  local isCombo = #tiles >= 2 or (#tiles == 1 and tiles[1].weight > 1)
+  log("processQueue: shorthands=[" .. shorthandListDesc(ctx.shorthands) .. "]"
+    .. " tiles=" .. #ctx.tiles
+    .. " isCombo=" .. tostring(ctx.isCombo)
+    .. " highlightedApp=" .. appName(ctx.highlightedBundleID)
+    .. " initialFocusedBundleID=" .. appName(ctx.initialFocusedBundleID)
+    .. " isHighlightInCurrentCombo=" .. tostring(ctx.isHighlightInCurrentCombo)
+    .. " comboMatch=" .. (ctx.highlightedAppCombo and ("stack[" .. ctx.highlightedAppComboIndex .. "]") or "nil"))
 
-  log("processQueue: shorthands=[" .. shorthandListDesc(mergedShorthands) .. "]"
-    .. " tiles=" .. #tiles .. " isCombo=" .. tostring(isCombo))
-
-  -- Combo: memorize and tile
-  if isCombo then
-    memorizeCombo(mergedShorthands)
-    currentCombo = mergedShorthands
+  if ctx.isCombo then
+    memorizeCombo(ctx)
+    currentCombo = ctx.shorthands
     log("processQueue: → tiling combo")
-    applyTiling(tiles, initialFocusedWindow)
-    return
-  end
-
-  if #tiles ~= 1 then return end
-
-  -- Single app: activate within current combo, replay other combo, cycle, or activate
-  local app = tiles[1].app
-  local bundleID = app:bundleID()
-  local initialBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID()
-  local isInCurrentCombo = currentCombo and collectBundleIDs(currentCombo)[bundleID]
-  local combo, stackIndex = findComboForBundle(bundleID)
-
-  log("processQueue: bundleID=" .. appName(bundleID)
-    .. " initialBundleID=" .. appName(initialBundleID)
-    .. " isInCurrentCombo=" .. tostring(isInCurrentCombo ~= nil)
-    .. " comboMatch=" .. (combo and ("stack[" .. stackIndex .. "]") or "nil"))
-
-  if isInCurrentCombo then
-    log("processQueue: → focus current combo apps for " .. appName(bundleID))
-    local focused = {}
-    for i = #currentCombo, 1, -1 do
-      local shorthand = currentCombo[i]
-      if shorthand.type == ShorthandType.app and not focused[shorthand.id] then
-        focused[shorthand.id] = true
-        local comboApp = launchOrGetApp(shorthand.id)
-        if comboApp then
-          for _, w in ipairs(comboApp:allWindows()) do
-            if w:isStandard() then
-              log("processQueue: focusing " .. windowDesc(w))
-              w:focus()
-            end
-          end
-        end
-      end
-    end
-  elseif combo then
-    log("processQueue: → replay combo for " .. appName(bundleID))
-    replayCombo(stackIndex, bundleID, initialFocusedWindow)
-  elseif bundleID == initialBundleID then
-    log("processQueue: → cycle windows for " .. appName(bundleID))
-    cycleWindows(app)
-  else
-    log("processQueue: → activate " .. appName(bundleID))
-    app:activate(true)
+    applyTiling(ctx)
+  elseif ctx.isHighlight then
+    highlightApp(ctx)
   end
 end
 

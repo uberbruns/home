@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Applications/Hammerspoon.app/Contents/Resources/extensions/hs/**)"
+    ]
+  }
+}
