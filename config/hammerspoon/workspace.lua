@@ -484,7 +484,7 @@ end
 -- Tiles all combo participants and focuses the triggering app.
 -- Prunes apps that are no longer present in the app stack.
 local function replayCombo(ctx)
-  local combo = comboStack[ctx.poke.associatedComboIndex]
+  local combo = ctx.poke.associatedCombo
   log("replayCombo: bundleID=" .. appName(ctx.poke.bundleID)
     .. " combo=[" .. shorthandListDesc(combo) .. "]")
 
@@ -503,8 +503,7 @@ local function replayCombo(ctx)
   local tiles = buildTiles(prunedCombo)
   local isStillCombo = #tiles >= 2 or (#tiles == 1 and tiles[1].weight > 1)
 
-  log("replayCombo: pruned=[" ..
-  shorthandListDesc(prunedCombo) .. "] tiles=" .. #tiles .. " isStillCombo=" .. tostring(isStillCombo))
+  log("replayCombo: pruned=[" .. shorthandListDesc(prunedCombo) .. "] tiles=" .. #tiles .. " isStillCombo=" .. tostring(isStillCombo))
 
   -- Update or remove the combo from the stack
   if isStillCombo then
@@ -543,7 +542,6 @@ end
 --   initialFocusedWindow  — the window that held focus when the first shorthand was enqueued
 --   initialFocusedBundleID — the bundle ID of the initially focused window's application, or nil
 --   shorthands            — the resolved and merged shorthand list
---   isPoke                — true when the shorthands resolve to a single app to poke
 --   combo                 — combo details when a combo was formed, otherwise nil
 --     .tiles              — the tiles built from the shorthands
 --   poke                  — poke details when isPoke is true, otherwise nil
@@ -565,7 +563,6 @@ local function buildContext(shorthands, initialFocusedWindow)
     initialFocusedWindow   = initialFocusedWindow,
     initialFocusedBundleID = initialFocusedWindow and initialFocusedWindow:application():bundleID() or nil,
     shorthands             = mergedShorthands,
-    isPoke                 = pokeApp ~= nil,
     combo                  = isCombo and {
       tiles = tiles,
     } or nil,
@@ -593,21 +590,6 @@ local function pokeUnfocusedAppInCurrentCombo(ctx)
   ctx.poke.app:activate(true)
 end
 
--- Pokes the app by replaying its memorized combo, pruning stale members.
-local function pokeAppInMemorizedCombo(ctx)
-  replayCombo(ctx)
-end
-
--- Pokes the app by cycling its windows, raising the backmost one.
-local function cycleAppWindows(ctx)
-  cycleWindows(ctx)
-end
-
--- Pokes the app by bringing it to the foreground without tiling.
-local function activateApp(ctx)
-  ctx.poke.app:activate(true)
-end
-
 -- Pokes an app: focuses it within the current combo, replays a memorized
 -- combo, cycles its windows, or activates it directly.
 local function pokeApp(ctx)
@@ -621,18 +603,18 @@ local function pokeApp(ctx)
     end
   elseif ctx.poke.associatedCombo then
     log("pokeApp: → replay memorized combo")
-    pokeAppInMemorizedCombo(ctx)
+    replayCombo(ctx)
   elseif ctx.poke.bundleID == ctx.initialFocusedBundleID then
     log("pokeApp: → cycle app windows")
-    cycleAppWindows(ctx)
+    cycleWindows(ctx)
   else
     log("pokeApp: → activate app")
-    activateApp(ctx)
+    ctx.poke.app:activate(true)
   end
 end
 
 -- Processes the shorthand queue on hyper release or immediate (non-hyper) input.
--- Handles combos (memorize + tile), single-app highlighting, window cycling, and activation.
+-- Handles combos (memorize + tile), single-app pokes, window cycling, and activation.
 local function processQueue()
   local initialFocusedWindow = buildFocusedWindow or hs.window.focusedWindow()
   buildFocusedWindow = nil
@@ -668,7 +650,7 @@ local function processQueue()
     currentCombo = ctx.shorthands
     log("processQueue: → tiling combo")
     applyTiling({ tiles = combo.tiles, initialFocusedWindow = ctx.initialFocusedWindow })
-  elseif ctx.isPoke then
+  elseif ctx.poke then
     pokeApp(ctx)
   end
 end
