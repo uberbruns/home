@@ -203,7 +203,10 @@ SHELL = os.environ.get("SHELL", "fish")
 
 def hide_panel():
     """Hide the quick-access panel via Hammerspoon."""
-    subprocess.run([HS, "-c", "HideQuickAccess()"], capture_output=True)
+    if os.environ.get("GHOSTTY_QUICK_TERMINAL") == "1":
+        subprocess.run([HS, "-c", "HideGhosttyQuickAccess()"], capture_output=True)
+    else:
+        subprocess.run([HS, "-c", "HideQuickAccess()"], capture_output=True)
 
 
 def apply_queued_replacement():

@@ -78,3 +78,15 @@ keybind = super+shift+z=unbind
 
 keybind = performable:super+c=copy_to_clipboard
 keybind = performable:super+v=paste_from_clipboard
+
+
+#   ____       _     __     ______                  _           __
+#  / __ \__ __(_)___/ /__  /_  __/__ ______ _  (_)__  ___ _/ /
+# / /_/ / // / / __/  '_/   / / / -_) __/  ' \/ / _ \/ _ `/ /
+# \___\_\_,_/_/\__/_/\_\   /_/  \__/_/ /_/_/_/_/_//_/\_,_/_/
+
+quick-terminal-position = center
+quick-terminal-size = 798px,560px
+quick-terminal-animation-duration = 0
+quick-terminal-autohide = true
+

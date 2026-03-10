@@ -15,6 +15,7 @@ local workspace = require("workspace")
 -- \___/\___/_//_/_//_/\_, /\_,_/_/  \__/
 --                    /___/
 
+require("ghostty-quick-access")
 require("kitty-quick-access")
 require("selection")
 
