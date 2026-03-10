@@ -1,1 +1,50 @@
+#    ______                   __
+#   / __/ /  ___ ________ ___/ /
+#  _\ \/ _ \/ _ `/ __/ -_) _  /
+# /___/_//_/\_,_/_/  \__/\_,_/
+
+font-family = Source Code Pro for Powerline
+font-size = 15
+adjust-cell-height = 10%
+
+window-padding-x = 12
+window-padding-y = 12
+cursor-style = block
+cursor-style-blink = true
+
+
+#  ________
+# /_  __/ /  ___ __ _  ___
+#  / / / _ \/ -_)  ' \/ -_)
+# /_/ /_//_/\__/_/_/_/\__/
+
+palette = 0=#110f18
+palette = 1=#c55858
+palette = 2=#60bbb3
+palette = 3=#c7a06f
+palette = 4=#6cb2c7
+palette = 5=#a277ff
+palette = 6=#54c59f
+palette = 7=#bdb6cd
+palette = 8=#6d677c
+palette = 9=#ff6767
+palette = 10=#71f0e4
+palette = 11=#ffca85
+palette = 12=#82e2ff
+palette = 13=#f694ff
+palette = 14=#61ffca
+palette = 15=#edecee
+background = #15141b
+foreground = #edecee
+cursor-color = #a277ff
+cursor-text = #edecee
+selection-background = #a277ff
+selection-foreground = #edecee
+
+
+#    ___  __     __  ___
+#   / _ \/ /__ _/ /_/ _/__  ______ _
+#  / ___/ / _ `/ __/ _/ _ \/ __/  ' \
+# /_/  /_/\_,_/\__/_/ \___/_/ /_/_/_/
+
 command = fish --login --interactive
