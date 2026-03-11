@@ -1,2 +1,3 @@
 [tools]
 "go:github.com/savedra1/clipse" = "latest"
+mas = "latest"

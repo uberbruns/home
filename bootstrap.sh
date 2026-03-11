@@ -11,6 +11,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ===========================================================================
 
 install_packages_macos() {
+    if ! xcode-select -p &>/dev/null; then
+        echo "Installing Xcode Command Line Tools..."
+        xcode-select --install
+        echo "Waiting for Xcode Command Line Tools installation to complete..."
+        until xcode-select -p &>/dev/null; do sleep 5; done
+    fi
+
     if ! command -v brew &>/dev/null; then
         echo "Installing Homebrew..."
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
