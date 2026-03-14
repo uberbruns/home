@@ -21,7 +21,7 @@ target = "~/.config/ghostty"
 labels = ["linux", "cli"]
 
 [[mise]]
-source = "config/mise/config.toml"
+source = "config/mise/main.toml"
 target = "~/.config/mise.toml"
 labels = ["cli"]
 
