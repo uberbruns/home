@@ -1,4 +1,5 @@
 [tools]
+fzf = "latest"
 python = "latest"
 uv = "latest"
 
