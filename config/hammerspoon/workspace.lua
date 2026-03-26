@@ -381,7 +381,10 @@ local function applyTiling(ctx)
 
   local tilesWithWindows = assignWindowsToTiles(ctx.tiles)
   if #tilesWithWindows == 0 then
-    log("applyTiling: no tiles with windows")
+    log("applyTiling: no tiles with windows, launching all apps")
+    for _, tile in ipairs(ctx.tiles) do
+      hs.application.launchOrFocusByBundleID(tile.app:bundleID())
+    end
     return
   end
 
@@ -608,8 +611,13 @@ local function pokeApp(ctx)
     log("pokeApp: → cycle app windows")
     cycleWindows(ctx)
   else
-    log("pokeApp: → activate app")
-    ctx.poke.app:activate(true)
+    if #ctx.poke.app:allWindows() > 0 then
+      log("pokeApp: → activate app")
+      ctx.poke.app:activate(true)
+    else
+      log("pokeApp: → launch or focus app")
+      hs.application.launchOrFocusByBundleID(ctx.poke.bundleID)
+    end
   end
 end
 
