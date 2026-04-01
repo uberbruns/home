@@ -1,106 +1,81 @@
 ---
 name: swift-code-cleanup
-description: Apply after meaningful changes to a Swift source file
+description: Comprehensive Swift code cleanup orchestrator
 ---
 
-Reorganize Swift code within files to follow a logical structure that improves readability and maintainability.
+Apply comprehensive Swift code cleanup by executing specialized cleanup skills in optimal order.
 
-Apply each item systematically.
+This skill spawns subagents to systematically apply each cleanup category. The agents execute sequentially to ensure changes build upon each other coherently.
 
-### Remove Obsolete Code
+## Execution Order
 
-- [ ] Remove dead/unused code
-- [ ] Inline trivial code with only one or two callers
+The system applies cleanup skills in the following order for optimal results:
 
-### Refactoring
+1. **Remove Obsolete Code** - Eliminate dead code before refactoring
+2. **Refactoring** - Restructure code architecture and patterns
+3. **Method Body** - Organize internal method structure
+4. **Naming** - Apply consistent naming conventions
+5. **Documentation** - Add and update code documentation
+6. **File Structure** - Organize file and type layout
+7. **File-Level Marks** - Add file-level MARK comments (with dash)
+8. **Type-Level Marks** - Add type-level MARK comments (without dash)
+9. **Inline Comments** - Add subheading comments in method bodies
+10. **Vertical Whitespace** - Apply vertical spacing rules
 
-- [ ] Avoid global state
-- [ ] Make constant configuration accessible at file-level with private visibility (`private enum Config { }`)
-- [ ] Extract non-trivial repeated code into dedicated functions
-- [ ] Extract pure supporting logic into utility functions separated from the hosting type
-- [ ] Prefer small composable types with a single responsibility over larger types with unclear scope
-- [ ] Type kinds: Match each abstraction to the most fitting Swift construct
-    - [ ] Use classes or actors for long-lived entities whose lifecycle may be tied to other instances
-        - [ ] Minimize both the number of stateful types and the amount of state each one manages
-    - [ ] Use structs for data modeling and isolated functionality with no meaningful lifecycle
-    - [ ] Use enums for mutually exclusive state, minimizing the number of representable states
-- [ ] Pass a context instance along the call chain instead of re-fetching data already available at an earlier stage
-- [ ] Prefer computed properties over cached or recomputed values when the computation is pure
-- [ ] Instance methods should access state via properties, not through redundant parameters
-- [ ] Restrict access levels to the minimum required visibility
-- [ ] Use `let` instead of `var` for properties and variables that are never mutated
+## Instructions
 
-### Method Body
+### Phase 1: Manual Cleanup Skills
 
-- [ ] Check preconditions first with `guard` statements; avoid mid-body returns
-- [ ] Eliminate conditional logic when the input data is statically known and can be shaped to remove unnecessary branching
-- [ ] Conditional logic should handle the expected path first
-- [ ] Add one-line subheader comments describing each block's purpose
-- [ ] Order operations leaf-first, building up to the final root transformation or return value
-- [ ] Alphabetically order sequential accesses to properties of the same instance when order is irrelevant
+**Per-file parallelization:** The orchestrator MUST spawn one general-purpose subagent per target file. All file-level subagents run in parallel.
 
-### Documentation
+**Per-skill isolation:** Each file-level subagent MUST process the execution list sequentially, spawning a fresh general-purpose subagent for each skill. A clean subagent per skill ensures that each step starts with a clear context and avoids accumulated drift from prior edits.
 
-- [ ] Developer Note (Optional)
-    - [ ] Lead the file with an elevator pitch explaining the type's role in the broader project
-    - [ ] Summarize the applied business rules
-    - [ ] Add a glossary for domain-specific or non-obvious naming choices
-    - [ ] Document meaningful or surprising workarounds
-- [ ] Full documentation for public APIs and entry points only
-- [ ] Single-line docs for implementation details (2-3 lines for complex methods)
+The workflow proceeds as follows:
 
-### Naming
+1. The orchestrator identifies all target files.
+2. The orchestrator spawns one subagent per file (in parallel).
+3. Each file subagent iterates through the skill list in order and, for every skill, spawns a new subagent that:
+   - Reads the current state of the file
+   - Applies the skill checklist systematically and diligently
+   - Questions everything — no item is skipped without justification
+   - Makes necessary edits to the file
+   - Reports completed changes back to the file subagent
+4. The file subagent waits for each skill subagent to finish before spawning the next one, so that later skills build on earlier changes.
 
-- [ ] **Consistency** - Use the same name for identical concepts throughout the code; avoid synonyms (e.g., choose `path`, `directory`, or `folder` and use consistently rather than mixing them)
-- [ ] **Variables** - Specific, unabbreviated names that communicate purpose without extra context
-- [ ] **Functions** - Name matches purposes and implementation in body
-- [ ] **Specificity** - Prefer precise terms over generic ones; derive from symbol/function docs
-- [ ] **Length** - Names should be long enough to be unambiguous and short enough to be scannable; the right name feels obvious in retrospect. Err on the side of too long rather than too short.
-- [ ] **Weight** - Reserve generic verbs (`get`, `set`) for lightweight accessors; use more descriptive verbs (`discover`, `compute`, `load`) for non-trivial operations
-- [ ] **Symmetry** - Similarly purposed functions may share leading or trailing terms
-- [ ] **Type pattern** - `<adjective>?` + `<noun>` (e.g. `User`, `CachedTokenProvider`)
-- [ ] **Function pattern** - `<verb>` + `<adjective>?` + `<noun>` + `<context>?` (e.g. `fetchActiveUsers`, `validateInputFormat`, `buildNavigationStack`)
-- [ ] **State pattern** - `<gerund/noun>` + `<verb (past-tense)>` + `<context>?` (e.g. `loadingFinished`, `connectionEstablished`, `dataSynchronized`)
-- [ ] **Boolean pattern** - `is` or `are` + `<adjective>?` + `<noun>` OR `<verb (3rd person present)>` + `<noun>` (e.g. `isLoading`, `isActive`, `areItemsAvailable`, `contains`, `hasItems`, `exists`)
-- [ ] **Swift conventions** - Adhere to Swift API Design Guidelines and naming idioms
-- [ ] **Reduce Ambiguity** - Avoid overloading terms from related technologies; reserve domain-specific terminology for its intended context (e.g., reserve `request` and `response` exclusively for HTTP operations when using an HTTP API)
+**Skill execution order (each applied by its own subagent):**
 
-### File Structure
+1. `/swift-remove-obsolete` - Remove obsolete and trivial code
+2. `/swift-refactoring` - Apply refactoring patterns
+3. `/swift-method-body` - Structure method bodies
+4. `/swift-naming` - Apply naming conventions
+5. `/swift-documentation` - Add documentation
+6. `/swift-file-structure` - Organize file structure
+7. `/swift-file-level-marks` - Add file-level MARK comments (with dash)
+8. `/swift-type-level-marks` - Add type-level MARK comments (without dash)
+9. `/swift-inline-comments` - Add inline subheading comments
+10. `/swift-vertical-whitespace` - Apply vertical whitespace rules
 
-- [ ] Order: Imports > (Developer Notes) >  Config > Type Declaration > Extensions
+### Phase 2: Automated Formatting and Linting Tools
 
-### Type Implementation
+Search for and execute automated Swift formatting and linting tools configured in the project:
 
-- [ ] Properties (stored, then computed)
-- [ ] Lifecycle (`init`, `deinit`)
-- [ ] Entry points (public API, protocol conformances, handlers)
-- [ ] Implementation details (core logic, grouped by context/data structure operated on)
-- [ ] Supporting code (helpers, utilities, formatters, validators)
-- [ ] Private extensions at the end of the file
-- [ ] Alphabetical order within each section for equal-level symbols
+1. **Search for configuration files:**
+   - Use Glob to find `CLAUDE.md`, `AGENTS.md`, `Makefile`, `mise.toml`, `.mise.toml` in the project
+   - Read each found file and search for Swift formatting/linting tool references:
+     - `swift-format`, `swiftformat`, `swiftlint`, or similar tools
+     - Format/lint commands or make targets
+     - mise tasks related to formatting or linting
 
-### Section Separators
+2. **Execute automated tools if found:**
+   - For `Makefile`: Check for targets like `format`, `lint`, `fmt`, `swift-format`
+     - Run with `make <target>`
+   - For `mise`: Check available tasks with `mise tasks`
+     - Look for format/lint tasks and run with `mise run <task>`
+   - For `CLAUDE.md`/`AGENTS.md`: Look for documented formatting/linting commands and execute them
+   - Capture and report any errors or warnings from automated tools
+   - Verify the file compiles without errors
 
-- [ ] Separate logical sections with `// MARK: -` comments for top-level sections
-- [ ] Use `// MARK:` (without dash) for subsections within a type
-- [ ] Do not use MARK statements in small files
-- [ ] If MARK statements are used, apply them consistently to all file sections
-- [ ] Useful examples
-    - `// MARK: - Config`
-    - `// MARK: - Implementation`
-    - `// MARK: Properties`
-    - `// MARK: Lifecycle`
-    - `// MARK: Entrypoints`
-    - `// MARK: Implementation Details`
-    - `// MARK: - Supporting Types`
-    - `// MARK: - Supporting Extensions`
-    - `// MARK: - Supporting Functions`
-    - `// MARK: - Preview`
-
-### Vertical Whitespace
-
-- [ ] Two lines of whitespace between file-level declarations
-- [ ] Two lines of whitespace before `// MARK:` statements
-- [ ] One line of whitespace after `// MARK:` statements
-- [ ] One line of whitespace before each property
-    - [ ] No line of whitespace between properties for really simple self-documenting data types with nothing but properties in the main declaration.
+3. **Report summary:**
+   - List all changes made in Phase 1
+   - Report results from automated tools in Phase 2
+   - Note any remaining issues or warnings

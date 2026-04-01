@@ -3,43 +3,31 @@ name: swift-formatting
 description: Apply Swift formatting rules for code organization and visual structure
 ---
 
-Apply Swift formatting standards for code organization and visual structure.
+Apply comprehensive Swift formatting by executing specialized formatting skills.
 
-### Section Separators
+This skill orchestrates four focused formatting skills:
 
-- [ ] Separate logical sections with `// MARK: -` comments for top-level sections
-- [ ] Use `// MARK:` (without dash) for subsections within a type
-- [ ] Do not use MARK statements in small files
-- [ ] If MARK statements are used, apply them consistently to all file sections
-- [ ] Useful examples
-    - `// MARK: - Config`
-    - `// MARK: - Implementation`
-    - `// MARK: Properties`
-    - `// MARK: Lifecycle`
-    - `// MARK: Entrypoints`
-    - `// MARK: Implementation Details`
-    - `// MARK: - Supporting Types`
-    - `// MARK: - Supporting Extensions`
-    - `// MARK: - Supporting Functions`
-    - `// MARK: - Preview`
+1. `/swift-file-level-marks` - Apply file-level MARK comments (with dash)
+2. `/swift-type-level-marks` - Apply type-level MARK comments (without dash)
+3. `/swift-inline-comments` - Add inline subheading comments in method bodies
+4. `/swift-vertical-whitespace` - Apply vertical whitespace rules
 
-### Inline Subheading Comments
+## Instructions
 
-- [ ] Add one-line subheading comments to describe the purpose of each logical block in multi-step function bodies
-- [ ] Place subheading comments on the line immediately before the block the comment describes
-- [ ] Use clear, concise descriptions in present tense without personal pronouns
-- [ ] Keep comments short (typically 2-6 words)
-- [ ] Examples:
-    - `// Validate input parameters`
-    - `// Configure network request`
-    - `// Transform response data`
-    - `// Update UI state`
-    - `// Handle error cases`
+Execute each formatting skill in order:
 
-### Vertical Whitespace
+### 1. File-Level Marks
 
-- [ ] Two lines of whitespace between file-level declarations
-- [ ] Two lines of whitespace before `// MARK:` statements
-- [ ] One line of whitespace after `// MARK:` statements
-- [ ] One line of whitespace before each property
-    - [ ] No line of whitespace between properties for really simple self-documenting data types with nothing but properties in the main declaration.
+Apply `/swift-file-level-marks` to add file-level MARK comments for navigable top-level sections.
+
+### 2. Type-Level Marks
+
+Apply `/swift-type-level-marks` to add type-level MARK comments for navigable sections within types.
+
+### 3. Inline Comments
+
+Apply `/swift-inline-comments` to add subheading comments in multi-step method bodies.
+
+### 4. Vertical Whitespace
+
+Apply `/swift-vertical-whitespace` to ensure consistent spacing throughout the file.
