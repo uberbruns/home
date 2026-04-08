@@ -7,6 +7,8 @@ Apply comprehensive Swift code cleanup by executing specialized cleanup skills i
 
 This skill spawns subagents to systematically apply each cleanup category. The agents execute sequentially to ensure changes build upon each other coherently.
 
+**IMPORTANT:** Each phase and every checklist item within it MUST be applied diligently and systematically. Do not skip phases, gloss over individual items, or mark items as done without verifying them against the code. Work through the phases in order and treat each checklist item as a discrete step that requires explicit attention.
+
 ## Execution Order
 
 The system applies cleanup skills in the following order for optimal results:

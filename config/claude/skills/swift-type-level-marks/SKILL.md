@@ -40,12 +40,9 @@ Question every existing MARK comment.
 
 ### Subdividing Sections
 
-- [ ] Subdivide long lists by adding a colon and descriptor when the section contains many related items
-    - `// MARK: Properties: Dependencies`
-    - `// MARK: Properties: Configuration`
-    - `// MARK: Properties: State`
-    - `// MARK: Implementation Details: Network`
-    - `// MARK: Implementation Details: Data Processing`
+- [ ] Subdivide long lists by adding a slash and descriptor when the section contains many related items
+    - `// MARK: Implementation Details / Network`
+    - `// MARK: Implementation Details / ata Processing`
 
 ### Verification
 
