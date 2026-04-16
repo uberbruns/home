@@ -1,2 +1,4 @@
 [tools]
 xcodes = "latest"
+tuist = "latest"
+xcbeautify = "latest"

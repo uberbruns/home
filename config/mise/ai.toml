@@ -1,2 +1,4 @@
 [tools]
-"aqua:anthropics/claude-code" = "latest"
+claude = "latest"
+codex = "latest"
+crush = "latest"

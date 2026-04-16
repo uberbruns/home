@@ -70,6 +70,11 @@ source = "config/claude/skills"
 target = "~/.claude/skills"
 labels = ["ai"]
 
+[[claude]]
+source = "config/claude/agents"
+target = "~/.claude/agents"
+labels = ["ai"]
+
 [kitty]
 target = "~/.config/kitty"
 labels = ["macos", "cli"]

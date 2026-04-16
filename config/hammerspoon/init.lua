@@ -16,7 +16,7 @@ local workspace = require("workspace")
 --                    /___/
 
 require("ghostty-quick-access")
-require("kitty-quick-access")
+-- require("kitty-quick-access")
 require("selection")
 
 -- Workspace
