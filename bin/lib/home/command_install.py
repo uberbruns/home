@@ -31,6 +31,13 @@ def execute_install(config: Config) -> None:
     reload_fish_shell()
 
 
+def execute_install_without_reload(config: Config) -> None:
+    """Run install steps without reloading the fish shell."""
+    execute_link(config)
+    install_mise_tools()
+    install_home_scripts()
+
+
 # ============================================================
 # Tools
 # ============================================================

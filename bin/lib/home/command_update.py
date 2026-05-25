@@ -8,7 +8,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from .command_install import execute_install
+from .command_install import execute_install_without_reload, reload_fish_shell
 from .command_pull import execute_pull
 from .config import Config
 from .output import print_header, print_success, print_warning
@@ -24,13 +24,16 @@ def execute_update(config: Config) -> None:
 
     Steps:
     1. Pull latest changes from remote
-    2. Install dotfiles, tools, and reload services
-    3. Update Homebrew packages
+    2. Install dotfiles and tools
+    3. Upgrade mise tools
+    4. Update Homebrew packages
+    5. Reload fish shell
     """
     execute_pull(config)
-    execute_install(config)
+    execute_install_without_reload(config)
     upgrade_mise_tools()
     update_homebrew_packages()
+    reload_fish_shell()
 
 
 # ============================================================
