@@ -1,7 +1,3 @@
-[hammerspoon]
-target = "~/.hammerspoon"
-labels = ["macos"]
-
 [fish]
 target = "~/.config/fish"
 labels = [["macos", "linux"], "cli"]

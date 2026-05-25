@@ -4,9 +4,6 @@
 [submodule "externals/ghostty-org/website"]
 	path = externals/ghostty-org/website
 	url = https://github.com/ghostty-org/website
-[submodule "externals/Hammerspoon/hammerspoon.github.io"]
-	path = externals/Hammerspoon/hammerspoon.github.io
-	url = https://github.com/Hammerspoon/hammerspoon.github.io
 [submodule "externals/kovidgoyal/kitty"]
 	path = externals/kovidgoyal/kitty
 	url = https://github.com/kovidgoyal/kitty

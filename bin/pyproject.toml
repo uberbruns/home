@@ -9,11 +9,6 @@ home = "home_cli:main"
 list-applications = "list_applications:main"
 list-repositories = "list_repositories:main"
 list-safari-bookmarks = "list_safari_bookmarks:main"
-quick-access-bookmarks = "quick_access_bookmarks:main"
-quick-access-clipboard = "quick_access_clipboard:main"
-quick-access-emojis = "quick_access_emojis:main"
-quick-access-home = "quick_access_home:main"
-quick-access-text = "quick_access_text:main"
 transform-text = "transform_text:main"
 
 [build-system]

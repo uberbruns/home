@@ -30,15 +30,6 @@ alias ai="claude -p"
 if status is-interactive
 
   #==================================================
-  # Quick Access Terminal
-  #==================================================
-
-  if set -q GHOSTTY_QUICK_TERMINAL; and command -q quick-access-home
-    quick-access-home
-  end
-
-
-  #==================================================
   # Tools
   #==================================================
 
