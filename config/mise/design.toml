@@ -1,0 +1,3 @@
+[tools]
+pandoc = "latest"
+typst = "latest"

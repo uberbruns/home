@@ -37,6 +37,11 @@ target = "~/.config/mise/conf.d/dev.toml"
 labels = ["dev"]
 
 [[mise]]
+source = "config/mise/design.toml"
+target = "~/.config/mise/conf.d/design.toml"
+labels = ["design"]
+
+[[mise]]
 source = "config/mise/media.toml"
 target = "~/.config/mise/conf.d/media.toml"
 labels = ["media"]
@@ -70,10 +75,6 @@ labels = ["ai"]
 source = "config/claude/agents"
 target = "~/.claude/agents"
 labels = ["ai"]
-
-[kitty]
-target = "~/.config/kitty"
-labels = ["macos", "cli"]
 
 [[starship]]
 source = "config/starship/starship.toml"
