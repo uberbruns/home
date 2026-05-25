@@ -1,7 +1,15 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+
+# Temporary files
+*.tmp.*
+/tmp
 /cache
+
+# Local config overrides
 /config.toml
 /.claude/settings.local.json
 config/fish/fish_variables
-__pycache__/
-*.tmp.*
-/tmp
