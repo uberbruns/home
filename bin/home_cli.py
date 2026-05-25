@@ -44,7 +44,7 @@ def main():
     """Parse arguments and dispatch the requested command.
 
     Commands:
-      install  - Link dotfiles, install mise tools, and reload Hammerspoon
+      install  - Link dotfiles, install mise tools, and reload fish shell
       link     - Create symlinks from home.toml (filtered by labels in config.toml)
       push     - Commit and push all changes with AI-generated commit message
       pull     - Fetch and pull latest changes (requires clean working tree)
