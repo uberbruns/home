@@ -2,14 +2,10 @@
 name = "home-bin"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["textcase>=0.4"]
+dependencies = []
 
 [project.scripts]
 home = "home_cli:main"
-list-applications = "list_applications:main"
-list-repositories = "list_repositories:main"
-list-safari-bookmarks = "list_safari_bookmarks:main"
-transform-text = "transform_text:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -19,7 +15,6 @@ build-backend = "hatchling.build"
 include = [
   "*.py",
   "lib/home/**",
-  "lib/safari_bookmarks/**",
 ]
 
 [tool.hatch.build.targets.wheel.sources]
