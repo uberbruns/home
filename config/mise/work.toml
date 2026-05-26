@@ -1,2 +1,4 @@
 [tools]
 aws-sso = "latest"
+just = "latest"
+"github:opentofu/opentofu" = "latest"
