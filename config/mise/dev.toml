@@ -1,3 +1,4 @@
 [tools]
 gh = "latest"
+ripgrep = "latest"
 "pipx:platformio" = "latest"
