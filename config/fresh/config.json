@@ -1,3 +1,7 @@
 {
-  "theme": "aura"
+  "theme": "aura",
+  "file_explorer": {
+    "show_hidden": true,
+    "show_gitignored": true
+  }
 }

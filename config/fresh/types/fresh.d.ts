@@ -821,6 +821,13 @@ type CreateVirtualBufferInSplitOptions = {
 	* Initial content entries with optional properties
 	*/
 	entries?: Array<TextPropertyEntry>;
+	/**
+	* Split role tag. When set to `"utility_dock"`, the dispatcher
+	* routes this buffer to the existing dock leaf if one exists,
+	* instead of creating a new split. See
+	* `docs/internal/tui-editor-layout-design.md` Section 2.
+	*/
+	role?: string;
 };
 type CreateVirtualBufferOptions = {
 	/**
@@ -981,6 +988,10 @@ type SpawnResult = {
 	* Process exit code (0 usually means success, -1 if killed)
 	*/
 	exit_code: number;
+};
+type StyledText = {
+	text: string;
+	style?: Partial<OverlayOptions>;
 };
 type TextPropertiesAtCursor = Array<Record<string, unknown>>;
 type TsHighlightSpan = {
@@ -1458,6 +1469,11 @@ interface EditorAPI {
 	*/
 	getBuiltinThemes(): unknown;
 	/**
+	* Full theme registry (builtins + user themes + packages + bundles).
+	* Keyed by canonical registry key; each value carries `_key` / `_pack`.
+	*/
+	getAllThemes(): unknown;
+	/**
 	* Delete a custom theme (alias for deleteThemeSync)
 	*/
 	deleteTheme(name: string): boolean;
@@ -1668,9 +1684,15 @@ interface EditorAPI {
 	*/
 	prompt(label: string, initialValue: string): Promise<string | null>;
 	/**
-	* Start an interactive prompt
+	* Start an interactive prompt.
+	* 
+	* When `floatingOverlay` is true, the editor renders the prompt
+	* and its suggestions inside a centred floating frame instead of
+	* the bottom minibuffer row (issue #1796 — Live Grep). The flag
+	* is rendering-only; confirm/cancel/hooks behave identically to a
+	* non-overlay prompt of the same `promptType`.
 	*/
-	startPrompt(label: string, promptType: string): boolean;
+	startPrompt(label: string, promptType: string, floatingOverlay?: boolean): boolean;
 	/**
 	* Begin a key-capture window for the calling plugin.
 	* 
@@ -1704,9 +1726,10 @@ interface EditorAPI {
 	*/
 	getNextKey(): Promise<KeyEventPayload>;
 	/**
-	* Start a prompt with initial value
+	* Start a prompt with initial value. See `startPrompt` for the
+	* meaning of `floatingOverlay`.
 	*/
-	startPromptWithInitial(label: string, promptType: string, initialValue: string): boolean;
+	startPromptWithInitial(label: string, promptType: string, initialValue: string, floatingOverlay?: boolean): boolean;
 	/**
 	* Set suggestions for the current prompt
 	* 
@@ -1714,6 +1737,18 @@ interface EditorAPI {
 	*/
 	setPromptSuggestions(suggestions: PromptSuggestion[]): boolean;
 	setPromptInputSync(sync: boolean): boolean;
+	/**
+	* Set the title shown in the floating-overlay prompt's frame
+	* header (issue #1796) as styled segments. Each segment
+	* carries optional `Partial<OverlayOptions>`, the same
+	* styling primitive used by virtual text — plugins mark
+	* keybinding hints with `{ fg: "ui.help_key_fg" }`,
+	* separators with `{ fg: "ui.popup_border_fg" }`, etc. Pass
+	* an empty array to clear the title and fall back to the
+	* prompt-type default. Has no visible effect on non-overlay
+	* prompts.
+	*/
+	setPromptTitle(title: StyledText[]): boolean;
 	/**
 	* Define a buffer mode (takes bindings as array of [key, command] pairs)
 	*/
@@ -2098,6 +2133,16 @@ interface HookEventMap {
 	after_file_save: {
 		path: string;
 		buffer_id: number;
+	};
+	/**
+	* Fired by the file explorer after a paste/duplicate/etc. mutates
+	* the filesystem without going through a buffer save. Plugins that
+	* surface FS-derived state (git status badges, etc.) should
+	* subscribe in addition to `after_file_save` to refresh on
+	* explorer-driven changes too.
+	*/
+	after_file_explorer_change: {
+		path: string;
 	};
 	// ── text edits ───────────────────────────────────────────────────────────
 	before_insert: {

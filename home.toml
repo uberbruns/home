@@ -42,6 +42,11 @@ target = "~/.config/mise/conf.d/design.toml"
 labels = ["design"]
 
 [[mise]]
+source = "config/mise/making.toml"
+target = "~/.config/mise/conf.d/making.toml"
+labels = ["making"]
+
+[[mise]]
 source = "config/mise/media.toml"
 target = "~/.config/mise/conf.d/media.toml"
 labels = ["media"]

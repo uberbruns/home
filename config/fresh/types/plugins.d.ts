@@ -66,3 +66,64 @@ declare global {
 	}
 }
 
+// ── live_grep ─────────────────────
+interface GrepMatch {
+	file: string;
+	line: number;
+	column: number;
+	content: string;
+}
+/** Options passed to a provider's `search` callback. */
+export interface SearchOpts {
+	/** Working directory the search should run in (the editor's cwd). */
+	cwd: string;
+	/** Caller's preferred result cap. Providers may return fewer.
+	*  Returning more is allowed; the Finder caps at its own
+	*  `maxResults`. */
+	maxResults: number;
+}
+/** A registered Live Grep backend. */
+export interface LiveGrepProvider {
+	/** Stable id, surfaced in status messages. Two providers with the
+	*  same name are both kept; only the higher-priority one is ever
+	*  selected unless it becomes unavailable. */
+	name: string;
+	/** Higher priority wins. Built-ins use 0/-1/-2; user-registered
+	*  providers default to 0 if omitted. */
+	priority?: number;
+	/** Cheap probe — typically `editor.spawnProcess("foo", [], cwd)`
+	*  and check `exit_code`. May be sync or async. Failures (thrown
+	*  errors) are treated as "not available". */
+	isAvailable: () => boolean | Promise<boolean>;
+	/** Run the search. Return an array of matches; an empty array
+	*  means "no matches" (not "provider broken"). Errors thrown
+	*  here surface as a status message and bypass the next
+	*  provider — the registry doesn't fall back automatically once
+	*  a provider is selected. */
+	search: (query: string, opts: SearchOpts) => Promise<GrepMatch[]>;
+}
+/** Public surface exposed via `editor.getPluginApi("live-grep")`. */
+export type LiveGrepApi = {
+	/** Add a provider. Returns an unregister function. */
+	registerProvider(provider: LiveGrepProvider): () => void;
+	/** Remove every provider whose name matches. Returns true if at
+	*  least one was removed. */
+	unregisterProvider(name: string): boolean;
+	/** Inspect the current provider list, sorted by priority desc.
+	*  Useful for status / debugging / settings UIs. */
+	listProviders(): {
+		name: string;
+		priority: number;
+	}[];
+	/** Forget the cached "selected provider" — the next search runs a
+	*  fresh `isAvailable()` probe. Call from init.ts after late
+	*  registrations or after the user installs a new binary. */
+	resetSelection(): void;
+};
+declare global {
+	interface FreshPluginRegistry {
+		"live-grep": LiveGrepApi;
+	}
+}
+export {};
+
