@@ -62,24 +62,44 @@ target = "~/.config/mise/conf.d/dev-apple.toml"
 labels = ["dev-apple"]
 
 [[claude]]
-source = "config/claude/commands"
+source = "config/agents/commands"
 target = "~/.claude/commands"
 labels = ["ai"]
 
 [[claude]]
-source = "config/claude/rules"
+source = "config/agents/rules"
 target = "~/.claude/rules"
 labels = ["ai"]
 
 [[claude]]
-source = "config/claude/skills"
+source = "config/agents/skills"
 target = "~/.claude/skills"
 labels = ["ai"]
 
 [[claude]]
-source = "config/claude/agents"
+source = "config/agents/agents"
 target = "~/.claude/agents"
 labels = ["ai"]
+
+[[codex]]
+source = "config/agents/commands"
+target = "~/.codex/commands"
+labels = ["work"]
+
+[[codex]]
+source = "config/agents/rules"
+target = "~/.codex/rules"
+labels = ["work"]
+
+[[codex]]
+source = "config/agents/skills"
+target = "~/.codex/skills"
+labels = ["work"]
+
+[[codex]]
+source = "config/agents/agents"
+target = "~/.codex/agents"
+labels = ["work"]
 
 [[starship]]
 source = "config/starship/starship.toml"

@@ -43,37 +43,22 @@ Use a HEREDOC to pass the body:
 
 ```bash
 gh pr create --draft --title "MOIA-123456: Short description" --body "$(cat <<'EOF'
-## Summary
-- First change
-- Second change
-
-## Test plan
-- [ ] `mise run sdk:test`
-- [ ] `mise run demo:build`
-
-## Relevant Issues
-* https://moia-dev.atlassian.net/browse/MOIA-123456
+<body content>
 EOF
 )"
 ```
 
-### Sections
+### Content
 
-**Summary** (required): Bullet points describing the changes. Focus on what changed and why, not implementation details.
+If the repository contains `.github/PULL_REQUEST_TEMPLATE.md`, the PR body MUST follow that template's structure. Remove sections from the template that do not apply to the change — do not leave empty headings or placeholder text.
 
-**Test plan** (required): Checkbox items describing how to verify the changes. Include relevant `mise run` commands.
+If no template exists, structure the body as prose or short bullet points covering:
 
-**Relevant Issues** (required): Link to the Jira ticket.
+- What changed and why
+- How to verify the changes (relevant `mise run` commands or manual steps)
+- A link to the Jira ticket: `https://moia-dev.atlassian.net/browse/MOIA-xxxxxx`
 
-The following sections are optional. Only include them when they add value — omit for straightforward changes:
-
-**Motivation and Context**: Why this change is needed, what is better with it, dependencies on other PRs.
-
-**Where to start reviewing**: Guide the reviewer through the code. Point out areas where feedback is especially wanted.
-
-**Reviewer checklist**: Expectations for the reviewer as PR author.
-
-**Documentation status**: Checkbox indicating whether documentation was updated.
+Only include additional context (motivation, reviewer guidance, documentation status) when it adds information the diff alone does not convey.
 
 ### Stacked PRs
 
