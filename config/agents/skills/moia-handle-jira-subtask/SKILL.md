@@ -1,15 +1,15 @@
 ---
-name: moia-handle-jira
-description: Manage Jira tickets using the acli CLI. Use when creating tickets, transitioning ticket status, or viewing ticket details.
+name: moia-handle-jira-subtask
+description: Manage Jira subtasks using the acli CLI. Use when creating Jira Sub-task work items or when the user asks for a Jira subtask. Requires a parent issue before creating a subtask.
 ---
 
-# Jira Ticket Management
+# Jira Subtask Management
 
 Use `acli` (Atlassian CLI) for all Jira operations. Verify availability with `which acli`.
 
-Only create Sub-task tickets. If no parent ticket was provided, ask the user for one before proceeding.
+Only create `Sub-task` tickets with this skill. A parent ticket is required. If no parent ticket was provided, ask the user for one before creating the subtask.
 
-## Creating Tickets
+## Creating Subtasks
 
 Use `--from-json` with a JSON payload via stdin:
 
@@ -34,10 +34,10 @@ EOF
 
 | Field | Description |
 |---|---|
-| `summary` | Ticket title (Prefix with "[iOS] ") |
+| `summary` | Ticket title (Prefix with "[iOS] " for iOS work) |
 | `projectKey` | Jira project key |
-| `type` | `Epic`, `Story`, `Task`, `Sub-task`, or `Bug` |
-| `parentIssueId` | Parent ticket key (required for Sub-task) |
+| `type` | Must be `Sub-task` |
+| `parentIssueId` | Parent ticket key (required) |
 | `additionalAttributes` | Fields without dedicated JSON keys (e.g. `components`) |
 
 ### Hierarchy
@@ -48,7 +48,7 @@ Epic (level 1)
     Sub-task (level -1)
 ```
 
-A child type must be exactly one level below its parent. Creating a Task under a Story fails with "does not belong to appropriate hierarchy" — use `Sub-task` instead.
+A subtask parent must be a level 0 issue such as `Story`, `Task`, or `Bug`. Creating a subtask under an Epic fails because it skips a hierarchy level.
 
 ### Components
 
@@ -60,7 +60,7 @@ Components are set via `additionalAttributes.components` as an array of `{"name"
 acli jira workitem create --generate-json
 ```
 
-## Transitioning Tickets
+## Transitioning Subtasks
 
 ```bash
 acli jira workitem transition --key "MOIA-123456" --status "In Development" --yes
@@ -70,7 +70,7 @@ Common statuses: `Open`, `In Development`, `In Review`, `Done`.
 
 The `--yes` flag skips the confirmation prompt.
 
-## Viewing Tickets
+## Viewing Subtasks
 
 ```bash
 acli jira workitem view MOIA-123456

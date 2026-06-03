@@ -13,3 +13,5 @@ __pycache__/
 /config.toml
 /.claude/settings.local.json
 config/fish/fish_variables
+config/agents/skills/.system/
+config/agents/rules/default.rules
