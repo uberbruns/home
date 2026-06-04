@@ -1,15 +1,6 @@
 [submodule "externals/daltonmenezes/aura-theme"]
 	path = externals/daltonmenezes/aura-theme
 	url = https://github.com/daltonmenezes/aura-theme
-[submodule "externals/ghostty-org/website"]
-	path = externals/ghostty-org/website
-	url = https://github.com/ghostty-org/website
-[submodule "externals/kovidgoyal/kitty"]
-	path = externals/kovidgoyal/kitty
-	url = https://github.com/kovidgoyal/kitty
-[submodule "externals/milesj/emojibase"]
-	path = externals/milesj/emojibase
-	url = https://github.com/milesj/emojibase
 [submodule "externals/jdx/mise"]
 	path = externals/jdx/mise
 	url = https://github.com/jdx/mise/
