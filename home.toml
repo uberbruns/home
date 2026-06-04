@@ -16,6 +16,10 @@ source = "config/ghostty/linux"
 target = "~/.config/ghostty"
 labels = ["linux", "cli"]
 
+[gram]
+target = "~/.config/gram"
+labels = [["macos", "linux"], ["cli", "dev"]]
+
 [[mise]]
 source = "config/mise/main.toml"
 target = "~/.config/mise.toml"
