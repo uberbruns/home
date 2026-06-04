@@ -60,6 +60,8 @@ If no template exists, structure the body as prose or short bullet points coveri
 
 Only include additional context (motivation, reviewer guidance, documentation status) when it adds information the diff alone does not convey.
 
+Adhere to the writing rules outlined in the "docs-cleanup" skill.
+
 ### Stacked PRs
 
 When a PR targets a feature branch instead of `main`, add an `[!IMPORTANT]` callout at the top documenting the merge dependency:
@@ -79,7 +81,7 @@ gh pr edit <number> --add-label "Feature" --add-assignee "@me"
 
 ## Base Branch
 
-Default base is `main`. When stacking PRs, specify the base explicitly:
+Default base is `develop` and if not present it is `main`. When stacking PRs, specify the base explicitly:
 
 ```bash
 gh pr create --base feature/MOIA-123456-base-branch ...

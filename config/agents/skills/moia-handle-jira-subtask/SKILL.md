@@ -5,7 +5,7 @@ description: Manage Jira subtasks using the acli CLI. Use when creating Jira Sub
 
 # Jira Subtask Management
 
-Use `acli` (Atlassian CLI) for all Jira operations. Verify availability with `which acli`.
+Use `acli` (Atlassian CLI) for all Jira operations. Verify availability with `which acli`, then check Jira authentication with `acli jira auth status`.
 
 Only create `Sub-task` tickets with this skill. A parent ticket is required. If no parent ticket was provided, ask the user for one before creating the subtask.
 

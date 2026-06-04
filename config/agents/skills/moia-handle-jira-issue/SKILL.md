@@ -5,7 +5,7 @@ description: Manage Jira issues using the acli CLI. Use when creating non-subtas
 
 # Jira Issue Management
 
-Use `acli` (Atlassian CLI) for all Jira operations. Verify availability with `which acli`.
+Use `acli` (Atlassian CLI) for all Jira operations. Verify availability with `which acli`, then check Jira authentication with `acli jira auth status`.
 
 Use this skill for Jira work items that are not subtasks, such as `Epic`, `Story`, `Task`, or `Bug`.
 Do not require a parent ticket. Only include parent fields when the user explicitly asks for a hierarchy that supports them.
