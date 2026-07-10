@@ -8,6 +8,7 @@ __pycache__/
 *.tmp.*
 /tmp
 /cache
+.mise/cache
 
 # Local config overrides
 /config.toml
