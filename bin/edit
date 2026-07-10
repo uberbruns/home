@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-for editor in gram code fresh; do
+for editor in code gram fresh; do
   if command -v "$editor" >/dev/null 2>&1; then
     exec "$editor" "$@"
   fi
 done
 
-echo "edit: no editor found (tried gram, code, fresh)" >&2
+echo "edit: no editor found" >&2
 exit 1
