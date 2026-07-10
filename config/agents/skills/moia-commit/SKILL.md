@@ -1,6 +1,6 @@
 ---
 name: moia-commit
-description: Create a git commit for staged changes with a conventional commit message prefixed by the Jira ticket ID.
+description: Create a git commit for staged changes with a conventional commit message prefixed by the Jira ticket ID. Used for repositories part of the moia-dev organisation
 ---
 
 # Create Commit
@@ -22,3 +22,12 @@ Create a git commit for the currently staged changes.
 - Keep to one line, 50-72 characters if possible
 - No bullet points, no body
 - No coauthorship
+
+## Add trailers (only when commiting to moia-dev)
+
+  - `Co-authored-by: $MODEL via $HARNESS_NAME <$HARNESS_EMAIL>`
+
+  Examples:
+  - `Co-authored-by: Claude-Opus-4.8 via Claude-Code <noreply@anthropic.com>`
+  - `Co-authored-by: Claude-Sonnet-4.6 via Claude-Code <noreply@anthropic.com>`
+  - `Co-authored-by: GPT-5.5 via Codex <codex@openai.com>`
