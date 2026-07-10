@@ -1,5 +1,5 @@
 [tools]
 gh = "latest"
+lazygit = "latest"
 ripgrep = "latest"
-rust = "latest"
 "pipx:platformio" = "latest"
