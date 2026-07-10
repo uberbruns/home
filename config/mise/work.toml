@@ -1,5 +1,5 @@
 [tools]
 aws-sso = "latest"
-codex = "latest"
+codex = { version = "latest", minimum_release_age = "0" }
 just = "latest"
 "github:opentofu/opentofu" = "latest"

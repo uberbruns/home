@@ -1,2 +1,2 @@
 [tools]
-claude = "latest"
+claude = { version = "latest", minimum_release_age = "0" }
