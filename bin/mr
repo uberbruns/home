@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+if [ $# -eq 0 ]; then
+  exec mise tasks ls
+fi
+exec mise run "$@"
