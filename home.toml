@@ -105,6 +105,11 @@ source = "config/agents/agents"
 target = "~/.codex/agents"
 labels = ["work"]
 
+[[herdr]]
+source = "config/herdr/config.toml"
+target = "~/.config/herdr/config.toml"
+labels = [["macos", "linux"], "ai"]
+
 [[starship]]
 source = "config/starship/starship.toml"
 target = "~/.config/starship.toml"

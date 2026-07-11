@@ -1,0 +1,32 @@
+[theme]
+name = "catppuccin"
+auto_switch = false
+
+# Aura (https://github.com/daltonmenezes/aura-theme), adapted from
+# externals/daltonmenezes/aura-theme and config/ghostty/shared/themes/aura-custom
+[theme.custom]
+panel_bg = "#15141b"
+surface_dim = "#110f18"
+surface0 = "#2d2b38"
+surface1 = "#3b334b"
+overlay0 = "#4d466e"
+overlay1 = "#525156"
+subtext0 = "#cdccce"
+text = "#edecee"
+accent = "#a277ff"
+mauve = "#a277ff"
+red = "#ff6767"
+green = "#61ffca"
+yellow = "#c7a06f"
+peach = "#ffca85"
+blue = "#82e2ff"
+teal = "#54c59f"
+
+[terminal]
+default_shell = "/opt/homebrew/bin/fish"
+
+
+[[keys.command]]
+key = "cmd+g"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"
