@@ -1,5 +1,5 @@
 {
-  "theme": "aura",
+  "theme": "Aura.json",
   "file_explorer": {
     "show_hidden": true,
     "show_gitignored": true
