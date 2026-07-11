@@ -66,12 +66,33 @@ declare global {
 	}
 }
 
+// ── live_diff ─────────────────────
+export type LiveDiffApi = {
+	/** Lines whose Sørensen–Dice similarity ratio is at least this value
+	* render as in-place "modified" (bg highlight + word-level diff on the
+	* new line). Below this they split into a removed + added pair so the
+	* change reads as a rewrite. Range 0..1; clamped. */
+	setSimilarityThreshold(value: number): void;
+	getSimilarityThreshold(): number;
+};
+declare global {
+	interface FreshPluginRegistry {
+		"live-diff": LiveDiffApi;
+	}
+}
+
 // ── live_grep ─────────────────────
+/** The data sources Universal Search can look in. `files` is the
+*  classic project-file grep; the others are opt-in scopes layered on
+*  top. Each enabled scope contributes tagged matches to one merged
+*  result list. See `docs/internal/global-search-ux.md`. */
+type ScopeId = "files" | "ignored" | "buffers" | "terminals" | "diagnostics";
 interface GrepMatch {
 	file: string;
 	line: number;
 	column: number;
 	content: string;
+	source?: ScopeId;
 }
 /** Options passed to a provider's `search` callback. */
 export interface SearchOpts {
@@ -81,6 +102,19 @@ export interface SearchOpts {
 	*  Returning more is allowed; the Finder caps at its own
 	*  `maxResults`. */
 	maxResults: number;
+	/** When true, the "Ignored & hidden" scope is on: providers should
+	*  also search `.gitignore`d / hidden files. Built-in `rg` and
+	*  `git-grep` honour this; other built-ins (ag/ack/grep) currently
+	*  ignore it and always search their default set. */
+	includeIgnored?: boolean;
+	/** When true, match whole words only (rg `-w`, git-grep/grep `-w`).
+	*  Providers should add the appropriate flag. */
+	wholeWord?: boolean;
+	/** When true (the default), the query is a regular expression; when
+	*  false, it's a literal/fixed string the provider must escape (rg
+	*  `-F`, git-grep/grep `-F`). Custom providers should honour this so
+	*  the query is interpreted consistently with the toolbar toggle. */
+	regex?: boolean;
 }
 /** A registered Live Grep backend. */
 export interface LiveGrepProvider {
@@ -126,4 +160,17 @@ declare global {
 	}
 }
 export {};
+
+// ── vi_mode ─────────────────────
+export type ViModeApi = {
+	toggle(): void;
+	enable(): void;
+	disable(): void;
+	isEnabled(): boolean;
+};
+declare global {
+	interface FreshPluginRegistry {
+		"vi-mode": ViModeApi;
+	}
+}
 
