@@ -1,3 +1,6 @@
+[settings]
+minimum_release_age = "0h"
+
 [tools]
 bat = "latest"
 fastfetch = "latest"
