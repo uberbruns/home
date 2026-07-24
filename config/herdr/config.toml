@@ -30,3 +30,6 @@ default_shell = "/opt/homebrew/bin/fish"
 key = "cmd+g"
 type = "plugin_action"
 command = "persiyanov.reviewr.toggle"
+
+[ui]
+agent_panel_sort = "spaces"
