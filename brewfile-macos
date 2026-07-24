@@ -1,4 +1,5 @@
 brew "fish"
+brew "fresh-editor"
 brew "mise"
 brew "starship"
 cask "font-source-code-pro-for-powerline"

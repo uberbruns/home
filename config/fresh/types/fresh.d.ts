@@ -497,6 +497,32 @@ type WindowInfo = {
 	* emitted when false.
 	*/
 	shared_worktree?: boolean;
+	/**
+	* Remote backend identity when this session's backend is not
+	* host-local (SSH / Kubernetes). Carried for live remote windows
+	* *and* for dormant (not-yet-connected / disconnected) sessions, so
+	* the dock can badge a restored SSH session before any connection
+	* exists. `None` for local sessions and plugin-managed backends
+	* (devcontainer), whose facet the owning plugin supplies itself.
+	*/
+	remote?: RemoteBackendInfo | null;
+};
+type RemoteBackendInfo = {
+	/**
+	* Backend kind: `"ssh"` or `"kubernetes"`.
+	*/
+	kind: string;
+	/**
+	* Short human identity for the row (e.g. `deploy@build-01`,
+	* `ns/pod`).
+	*/
+	detail: string;
+	/**
+	* `true` when the backend connection is currently live; `false` for a
+	* dormant session (restored from disk, not yet connected, or whose
+	* last connect failed).
+	*/
+	connected: boolean;
 };
 type JsDiagnostic = {
 	/**
@@ -896,6 +922,12 @@ type OverlayOptions = {
 	*/
 	extendToLineEnd: boolean;
 	/**
+	* Whether to render with reverse video (fg/bg swapped). Used for
+	* block-style text carets in form controls, where a hardware
+	* cursor isn't available (modal overlays).
+	*/
+	reversed: boolean;
+	/**
 	* When `true`, `fg` is applied only on cells whose existing fg
 	* matches this overlay's resolved bg — i.e. a same-colour fg/bg
 	* collision. Lets a row-wide overlay stay legible on tokens that
@@ -1021,6 +1053,16 @@ type TreeNode = {
 	* `WidgetMutation::SetCheckedKeys`.
 	*/
 	checked?: boolean | null;
+	/**
+	* Continuation lines rendered below the node's primary `text`
+	* line when the parent `Tree` has `item_height > 1`. Each entry
+	* is one screen row, indented to align under the primary line's
+	* body (past the indent + disclosure/checkbox prefix). The host
+	* renders at most `item_height - 1` of them and blank-pads a
+	* shorter node so every row in the tree is the same fixed height.
+	* Ignored when `item_height == 1`.
+	*/
+	extraLines?: Array<TextPropertyEntry>;
 };
 type WidgetSpec = {
 	"kind": "row";
@@ -1048,6 +1090,162 @@ type WidgetSpec = {
 	checked: boolean;
 	label: string;
 	focused: boolean;
+	/**
+	* Neither checked nor unchecked: renders a neutral `[-]` chip.
+	* Used for values that are unset and inherit from a lower
+	* config layer (issue #2345) — a definite `[ ]` would read as
+	* "the user turned this off". Defaults to `false`.
+	*/
+	indeterminate: boolean;
+	/**
+	* Form-style layout: render `label: [v]` (label first, chip
+	* after) instead of the default `[v] label`. In this layout
+	* the toggle's hit area covers only the chip, so clicks on
+	* the label don't flip the value. Defaults to `false`.
+	*/
+	labelFirst: boolean;
+	/**
+	* Pad the label to this display width in `label_first`
+	* layout so a column of controls aligns their chips. `0` =
+	* no padding. Defaults to `0`.
+	*/
+	labelWidth: number;
+	key?: string | null;
+} | {
+	"kind": "number";
+	/**
+	* Initial value. Read at first render only; instance state
+	* takes over thereafter.
+	*/
+	value: number;
+	/**
+	* Inclusive lower bound. Values clamp to it when set.
+	*/
+	min?: number | null;
+	/**
+	* Inclusive upper bound. Values clamp to it when set.
+	*/
+	max?: number | null;
+	/**
+	* Amount added / subtracted per step. Defaults to `1`.
+	*/
+	step: number;
+	/**
+	* Render the value as an integer (no decimal point). The
+	* value is still carried as `f64`; only the display is
+	* truncated. Defaults to `false`.
+	*/
+	integer: boolean;
+	/**
+	* Render the value as a percentage: display is `value * 100`
+	* suffixed with `%` (so a stored `0.25` shows as `25%`).
+	* Mirrors the Settings UI's float-as-percent controls.
+	* Defaults to `false`.
+	*/
+	percent: boolean;
+	/**
+	* Optional label rendered before the value cell. Empty =
+	* omitted.
+	*/
+	label?: string;
+	/**
+	* Whether this widget has visual focus. Initial-only once
+	* the host owns focus (same as `Toggle`).
+	*/
+	focused: boolean;
+	/**
+	* Pad the label to this display width so a column of
+	* controls aligns their value cells. `0` = no padding.
+	*/
+	labelWidth: number;
+	/**
+	* In-place edit buffer. `Some` = the value is being edited:
+	* the cell renders this text (with caret / selection) instead
+	* of the formatted value. `None` = display mode.
+	*/
+	editText?: string | null;
+	/**
+	* Byte offset of the edit caret within `edit_text`. `-1` =
+	* no caret (ignored unless `edit_text` is `Some`).
+	*/
+	editCursor: number;
+	/**
+	* Selection byte range within `edit_text` (`start`, `end`).
+	* `-1` for either end = no selection.
+	*/
+	editSelStart: number;
+	editSelEnd: number;
+	key?: string | null;
+} | {
+	"kind": "dropdown";
+	/**
+	* The selectable options, in display order.
+	*/
+	options: Array<string>;
+	/**
+	* Initial selected index into `options`. Read at first
+	* render only; instance state takes over thereafter.
+	* Clamped to `[0, options.len())`.
+	*/
+	selectedIndex: number;
+	/**
+	* Optional label rendered before the value button. Empty =
+	* omitted.
+	*/
+	label?: string;
+	/**
+	* Whether this widget has visual focus. Initial-only once
+	* the host owns focus.
+	*/
+	focused: boolean;
+	/**
+	* Pad the label to this display width so a column of
+	* controls aligns their value buttons. `0` = no padding.
+	*/
+	labelWidth: number;
+	/**
+	* Whether the option list is expanded inline below the value
+	* button (`▲` arrow + one row per visible option). Closed
+	* (`▼`) by default.
+	*/
+	open: boolean;
+	/**
+	* First visible option row when `open` and the list is
+	* taller than its window. Defaults to `0`.
+	*/
+	scrollOffset: number;
+	key?: string | null;
+} | {
+	"kind": "dualList";
+	/**
+	* The full universe of selectable options.
+	*/
+	options: Array<DualListOption>;
+	/**
+	* Initial ordered set of included option values. Seed only;
+	* instance state takes over after first render.
+	*/
+	included: Array<string>;
+	/**
+	* Option values owned by a sibling list — filtered out of
+	* this list's Available column so the two never overlap.
+	*/
+	excluded: Array<string>;
+	/**
+	* Optional label rendered above the columns. Empty =
+	* omitted.
+	*/
+	label?: string;
+	/**
+	* Whether this widget has visual focus. Initial-only once
+	* the host owns focus.
+	*/
+	focused: boolean;
+	/**
+	* Number of body rows the columns occupy. Plugin computes
+	* from its viewport.
+	*/
+	visibleRows: number;
 	key?: string | null;
 } | {
 	"kind": "button";
@@ -1151,6 +1349,29 @@ type WidgetSpec = {
 	* back via `WidgetMutation::SetCheckedKeys`.
 	*/
 	checkable: boolean;
+	/**
+	* Fixed number of screen rows each node occupies. `1` (the
+	* default) is the classic single-line tree. A larger value
+	* renders every node as a card of that many rows — the
+	* node's primary `text` plus its `extra_lines`, blank-padded
+	* to this height. Windowing/scroll stay node-based (the node
+	* budget becomes `visible_rows / item_height`), so all
+	* existing single-line trees are unaffected.
+	*/
+	itemHeight: number;
+	/**
+	* When true (and `item_height > 1`), each *card* node — a
+	* leaf carrying `extra_lines` and no checkbox — renders
+	* inside a rounded border (`╭─…─╮` / `╰─…─╯` spanning the
+	* panel width), taking `item_height + 2` rows: top border,
+	* `item_height` content rows, bottom border. Non-card nodes
+	* (e.g. folder headers) render as plain single rows instead
+	* of being blank-padded to the card height. Restores the
+	* bordered-pill look the Orchestrator dock's card density
+	* had before it moved to a tree (issue #2703). Scroll and
+	* selection stay node-based; rows per node just vary.
+	*/
+	cardBorders: boolean;
 	key?: string | null;
 } | {
 	"kind": "text";
@@ -1243,6 +1464,35 @@ type WidgetSpec = {
 	* more to scroll. `0` (default) falls back to `5`.
 	*/
 	completionsVisibleRows: number;
+	/**
+	* Paint the caret as a REVERSED block cell inside the row
+	* (in addition to publishing the hardware-cursor position).
+	* Modal form surfaces (e.g. Settings) use this — a hardware
+	* cursor isn't shown over a modal, so the block cell is the
+	* only visible caret. Defaults to `false`.
+	*/
+	blockCaret: boolean;
+	/**
+	* Selection byte range within `value` (`start`, `end`), shown
+	* with the selection background while the widget is focused.
+	* `-1` for either end = no selection. Seed-only, like
+	* `cursor_byte`: once host-owned instance state exists, the
+	* editor's own selection wins. Mirrors `Number`'s
+	* `edit_sel_start`/`edit_sel_end`.
+	*/
+	selStart: number;
+	selEnd: number;
+	/**
+	* Form label-column width. When `> 0` (and `label` is set) the
+	* single-line field pads the label to this column and separates
+	* it from the value with `: `, so a column of `Text`, `Toggle`,
+	* `Number`, and `Dropdown` controls aligns their value cells
+	* (the Settings entry dialog sets it to the page's max label
+	* width). `0` (default) keeps the compact `label [value]` form
+	* plugins get by default. Clamped to keep the cell on-screen on
+	* narrow surfaces.
+	*/
+	labelWidth: number;
 	key?: string | null;
 } | {
 	"kind": "labeledSection";
@@ -1327,6 +1577,18 @@ type WidgetMutation = {
 	"kind": "setSelectedIndex";
 	widgetKey: string;
 	index: number;
+} | {
+	"kind": "setNumber";
+	widgetKey: string;
+	value: number;
+} | {
+	"kind": "setDropdown";
+	widgetKey: string;
+	index: number;
+} | {
+	"kind": "setDualIncluded";
+	widgetKey: string;
+	included: Array<string>;
 } | {
 	"kind": "setItems";
 	widgetKey: string;
@@ -2582,9 +2844,17 @@ interface EditorAPI {
 	*/
 	removeOverlay(bufferId: number, handle: string): boolean;
 	/**
-	* Add a conceal range that hides or replaces a byte range during rendering
+	* Add a conceal range that hides or replaces a byte range during rendering.
+	* 
+	* `activation` optionally makes the conceal cursor-dependent:
+	* `"unless-cursor-in"` (active only while no cursor is inside
+	* `[scopeStart, scopeEnd)`) or `"if-cursor-in"` (active only while a
+	* cursor IS inside it). Emitting both renderings of a
+	* cursor-revealable decoration once — instead of rebuilding markers
+	* on every cursor move — is what keeps cursor movement free of
+	* marker churn (and of the cache invalidation it causes).
 	*/
-	addConceal(bufferId: number, namespace: string, start: number, end: number, replacement: string | null): boolean;
+	addConceal(bufferId: number, namespace: string, start: number, end: number, replacement: string | null, activation?: string, scopeStart?: number, scopeEnd?: number): boolean;
 	/**
 	* Clear all conceal ranges in a namespace
 	*/
@@ -2640,9 +2910,12 @@ interface EditorAPI {
 	*/
 	setFoldingRanges(bufferId: number, rangesArr: Record<string, unknown>[]): boolean;
 	/**
-	* Add a soft break point for marker-based line wrapping
+	* Add a soft break point for marker-based line wrapping.
+	* 
+	* `activation` optionally makes the break cursor-dependent — same
+	* semantics as `addConceal`'s activation parameters.
 	*/
-	addSoftBreak(bufferId: number, namespace: string, position: number, indent: number): boolean;
+	addSoftBreak(bufferId: number, namespace: string, position: number, indent: number, activation?: string, scopeStart?: number, scopeEnd?: number): boolean;
 	/**
 	* Clear all soft breaks in a namespace
 	*/
@@ -3124,24 +3397,14 @@ interface EditorAPI {
 	*/
 	restartLspForLanguage(language: string): boolean;
 	/**
-	* Claim an LSP URI scheme (e.g. "slang-synth"), without the "://".
-	*
-	* When an LSP navigation (go-to-definition, …) resolves to a non-file
-	* URI whose scheme was registered here, the editor fires the
-	* `lsp_open_external_uri` hook — carrying `{ uri, scheme, line,
-	* character, language, server_name }` — instead of showing its
-	* "external location, no local source file" fallback. The plugin then
-	* fetches the synthetic document and opens it (e.g. slangd builtin
-	* modules via `slangd --print-builtin-module`).
+	* Claim an LSP URI scheme (e.g. "slang-synth"). LSP navigations that
+	* resolve to a non-file URI with this scheme are routed to the
+	* `lsp_open_external_uri` hook instead of the core's fallback message.
 	*/
 	registerLspUriScheme(scheme: string): boolean;
 	/**
-	* Mark the buffer backing `path` read-only.
-	*
-	* Resolved by path rather than buffer id, so it is race-free when
-	* called immediately after `openFile(path, …)`: both are FIFO commands,
-	* so the buffer exists when this runs, whereas `getActiveBufferId()`
-	* reads a snapshot that may not yet reflect the open.
+	* Mark the buffer backing `path` read-only. Race-free right after
+	* `openFile` because both are FIFO commands.
 	*/
 	markFileReadOnly(path: string): boolean;
 	/**
@@ -3399,6 +3662,7 @@ interface EditorAPI {
 		maxResults?: number;
 		wholeWords?: boolean;
 		sourceBufferId?: number;
+		fileGlob?: string;
 	}): SearchHandle;
 	/**
 	* Replace matches in a file's buffer (async)
@@ -3719,14 +3983,6 @@ interface HookEventMap {
 			line: number;
 			column: number;
 		}[];
-	};
-	lsp_open_external_uri: {
-		uri: string;
-		scheme: string;
-		line: number;
-		character: number;
-		language: string;
-		server_name: string;
 	};
 	lsp_server_request: {
 		language: string;
