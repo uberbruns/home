@@ -3,5 +3,25 @@
   "file_explorer": {
     "show_hidden": true,
     "show_gitignored": true
-  }
+  },
+  "keybindings": [
+    {
+      "key": "w",
+      "modifiers": ["ctrl"],
+      "action": "close_tab",
+      "when": "normal"
+    },
+    {
+      "key": "w",
+      "modifiers": ["ctrl"],
+      "action": "noop",
+      "when": "normal"
+    },
+    {
+      "key": "w",
+      "modifiers": ["ctrl"],
+      "action": "close_tab",
+      "when": "normal"
+    }
+  ]
 }
