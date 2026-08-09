@@ -298,9 +298,181 @@ type SplitSnapshot = {
 	*/
 	bufferId: BufferId;
 	/**
+	* Label set by `setSplitLabel`, when this pane has one. Reported here so
+	* a later script can re-find a pane it named earlier — the ids change
+	* across restarts, the label is what the caller chose.
+	*/
+	label: string | null;
+	/**
+	* Column of this pane's left edge, in terminal cells, measured from
+	* the left edge of the editor area. This is what answers "which pane
+	* is on the left" — compare `x` between panes rather than guessing
+	* from list order.
+	*/
+	x: number;
+	/**
+	* Row of this pane's top edge, in terminal cells, measured from the
+	* top of the editor area. Compare `y` to tell top from bottom.
+	*/
+	y: number;
+	/**
+	* Pane width in cells, separator excluded.
+	*/
+	width: number;
+	/**
+	* Pane height in cells, separator excluded.
+	*/
+	height: number;
+	/**
 	* Viewport (top byte / dimensions) for this split's active buffer.
+	* This is the *text* viewport: it excludes the tab bar and any
+	* gutter, so it is smaller than the pane rect above.
 	*/
 	viewport: ViewportInfo;
+};
+type SplitCreated = {
+	/**
+	* The new pane's id — pass to `openFileInSplit`, `focusSplit`, ...
+	*/
+	splitId: number;
+	/**
+	* The pane the split was created from, still live and now smaller.
+	*/
+	sourceSplitId: number;
+	/**
+	* Buffer shown in the new pane.
+	*/
+	bufferId: BufferId;
+	/**
+	* Geometry of the new pane (see `SplitSnapshot`).
+	*/
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+};
+type SplitWindowOptions = {
+	/**
+	* Divider orientation. Default `"vertical"` — panes side by side.
+	*/
+	direction?: SplitAxis;
+	/**
+	* Which side the new pane lands on. Default `"after"`.
+	*/
+	place?: SplitPlacement;
+	/**
+	* First child's share of the space, 0.0–1.0. Default 0.5.
+	* "First" is the left/top pane regardless of `place`.
+	*/
+	ratio?: number;
+	/**
+	* Open this file in the new pane. Relative paths resolve against the
+	* window's root. When omitted the new pane shows the same buffer as
+	* the pane it was split from, which is what the keyboard split does.
+	*/
+	file?: string;
+	/**
+	* Leave focus where it was instead of moving it into the new pane.
+	* Default false (the new pane takes focus, matching the keyboard
+	* split).
+	*/
+	keepFocus?: boolean;
+};
+type SplitAxis = "vertical" | "horizontal";
+type SplitPlacement = "before" | "after";
+type LineTarget = {
+	/**
+	* Row in the source buffer, 0-indexed, that carries this target.
+	*/
+	line: number;
+	/**
+	* File to open. Relative paths resolve against the window's root.
+	*/
+	path: string;
+	/**
+	* Line to land on in that file, 0-indexed. Defaults to the top.
+	*/
+	target?: number;
+	/**
+	* Label of the pane to open into (`setSplitLabel`). When the label
+	* names no live pane — or is omitted — the editor opens beside the
+	* buffer holding the targets rather than replacing it, so an index
+	* never eats its own pane.
+	*/
+	into?: string;
+};
+type PaneDescription = {
+	/**
+	* Pass to `openFileInSplit`, `focusSplit`, `setSplitRatio`, ...
+	*/
+	splitId: number;
+	/**
+	* Buffer shown in this pane.
+	*/
+	bufferId: BufferId;
+	/**
+	* `"terminal"` (a PTY), `"file"` (backed by a path), or `"virtual"`
+	* (a plugin-owned scratch buffer).
+	*/
+	kind: string;
+	/**
+	* Label set by `setSplitLabel`, when this pane has one — how a script
+	* finds a pane it named in an earlier run.
+	*/
+	label: string | null;
+	/**
+	* Absolute path when this pane shows a file, else `None`.
+	*/
+	path: string | null;
+	/**
+	* Short label — the file name, or the buffer's name for the rest.
+	*/
+	name: string;
+	/**
+	* Whether this pane has focus.
+	*/
+	active: boolean;
+	/**
+	* Unsaved changes.
+	*/
+	modified: boolean;
+	/**
+	* On-screen geometry, in editor-area cells. Panes are listed left to
+	* right, top to bottom, so `panes[0]` is the leftmost/topmost; `x`
+	* and `y` say so precisely.
+	*/
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+};
+type WorkspaceDescription = {
+	/**
+	* Working directory of the active window.
+	*/
+	cwd: string;
+	/**
+	* The window this script is pointed at.
+	*/
+	windowId: bigint;
+	/**
+	* Durable id of that window — the one still valid after a restart.
+	*/
+	stableId: string;
+	/**
+	* Every open workspace, so a script can tell whether the thing it
+	* wants is in another window.
+	*/
+	windows: Array<WindowInfo>;
+	/**
+	* The active window's panes, in visual order (left to right, top to
+	* bottom).
+	*/
+	panes: Array<PaneDescription>;
+	/**
+	* Which pane has focus; also flagged on the pane itself.
+	*/
+	activeSplitId: number;
 };
 type LayoutHints = {
 	/**
@@ -417,9 +589,26 @@ type BufferInfo = {
 	*/
 	length: number;
 	/**
+	* Number of lines, when the buffer has been indexed. `None` for a very
+	* large file whose line index hasn't been built yet — the one case
+	* where the count genuinely isn't known.
+	*
+	* Worth reading after writing content: a buffer built from spans that
+	* forgot their newlines reports a plausible `length` and one line,
+	* which is otherwise only visible by looking at the screen.
+	*/
+	line_count: number | null;
+	/**
 	* Whether this is a virtual buffer (not backed by a file)
 	*/
 	is_virtual: boolean;
+	/**
+	* Whether this buffer is a live terminal (a PTY, not text). Terminal
+	* buffers are also `is_virtual`; this distinguishes "a shell is
+	* running here" from a plugin-owned scratch buffer, which is what
+	* `describeWorkspace()` reports as the pane's `kind`.
+	*/
+	is_terminal: boolean;
 	/**
 	* Whether editing is disabled for this buffer.
 	*/
@@ -467,6 +656,15 @@ type WindowInfo = {
 	* Stable session id. The base session is always `1`.
 	*/
 	id: number;
+	/**
+	* Durable workspace identity (`ws-…`), minted once when the workspace is
+	* created and carried in its on-disk snapshot. Unlike `id` — a per-process
+	* handle re-derived at every boot — this survives restarts, relabels and
+	* moves, so it is the id to hand out to anything that must still mean the
+	* same workspace later (an agent recording where it put its work, say).
+	* Empty only for a legacy workspace file written before stable ids.
+	*/
+	stable_id: string;
 	/**
 	* User-visible label (defaults to root basename).
 	*/
@@ -799,12 +997,38 @@ type CreateWindowWithTerminalOptions = {
 	* is a plain argv element — never interpolated into a shell string.
 	*/
 	resume?: Array<string>;
+	/**
+	* Extra environment variables to set in the spawned
+	* terminal's child process, on top of the inherited/activated
+	* env. Applied after the editor's control vars (`TERM`,
+	* `FRESH_SESSION`), so a plugin's entry wins over those only
+	* when it names the same key. `None` (the default) adds
+	* nothing — old callers behave exactly as before.
+	*/
+	env?: { [key in string] : string };
+	/**
+	* When set, the host mints an unforgeable capability token bound
+	* to the NEW window and injects it into the spawned terminal as
+	* `FRESH_CMD_TOKEN`. A client presenting that token over the
+	* control socket may drive this window by submitting scripts.
+	* `false` (the default) mints no token and injects nothing.
+	*
+	* The grant is all-or-nothing on purpose: a script can call
+	* anything the plugin API exposes, so a narrower list would
+	* describe a boundary that isn't there.
+	*/
+	allowScript?: boolean;
 };
 type SessionWithTerminalResult = {
 	/**
-	* The new window's id.
+	* The new window's id — a per-process handle, valid until this editor
+	* exits. Use `stableId` for anything that has to outlive the process.
 	*/
 	windowId: number;
+	/**
+	* The new workspace's durable identity (`ws-…`), stable across restarts.
+	*/
+	stableId: string;
 	/**
 	* The seeded terminal's id (for `sendTerminalInput`, etc.).
 	*/
@@ -871,6 +1095,45 @@ type CreateTerminalOptions = {
 	* to disambiguate. Empty string is treated the same as `None`.
 	*/
 	title?: string;
+	/**
+	* Extra environment variables to set in the spawned terminal's
+	* child process, on top of the inherited/activated env. Mirrors
+	* `CreateWindowWithTerminalOptions::env`. `None` (the default)
+	* adds nothing, so existing callers behave exactly as before.
+	*/
+	env?: { [key in string] : string };
+	/**
+	* Argv to run when this terminal is *restored* or *restarted*,
+	* instead of re-running `command`. The exact counterpart of
+	* `CreateWindowWithTerminalOptions::resume`, so an agent launched
+	* into an existing window rejoins its conversation on restart the
+	* same way one born in its own window does — a session started with
+	* `claude --session-id <id>` sets `resume` to
+	* `["claude", "--resume", "<id>"]`. `None` keeps `command` as the
+	* restore argv. The id is a plain argv element — never interpolated
+	* into a shell string.
+	*
+	* Setting `command` (with or without `resume`) also marks the
+	* terminal as a restorable *session* terminal, so it survives a
+	* workspace save even when `persistent` is false — the same
+	* exception `createWindowWithTerminal` relies on.
+	*/
+	resume?: Array<string>;
+	/**
+	* When set, the host mints an unforgeable capability token bound
+	* to the TARGET window (the active window, or `windowId` when
+	* set) and injects it into the spawned terminal as
+	* `FRESH_CMD_TOKEN` (alongside `FRESH_SESSION`). This lets an
+	* agent spawned into an *existing* window drive it by submitting
+	* scripts — the same capability a `createWindowWithTerminal`
+	* agent gets. `false` (the default) mints no token and injects
+	* nothing.
+	*
+	* The grant is all-or-nothing on purpose: a script can call
+	* anything the plugin API exposes, so a narrower list would
+	* describe a boundary that isn't there.
+	*/
+	allowScript?: boolean;
 };
 type CursorInfo = {
 	/**
@@ -1241,6 +1504,31 @@ type WidgetSpec = {
 	* the host owns focus.
 	*/
 	focused: boolean;
+	/**
+	* Which column the cursor sits in: `true` = Included,
+	* `false` = Available. Seed only, like `included` — host
+	* instance state takes over after first render. Hosts that
+	* drive the control themselves (Settings) keep re-supplying
+	* it so the rendered cursor tracks their own state.
+	*/
+	activeIncluded: boolean;
+	/**
+	* Cursor row within the Available column. Seed only (see
+	* `active_included`).
+	*/
+	availableCursor: number;
+	/**
+	* Cursor row within the Included column. Seed only (see
+	* `active_included`).
+	*/
+	includedCursor: number;
+	/**
+	* Optional one-line key hint rendered under the columns
+	* (e.g. `↑↓:Move  Shift+←→:Add/Remove`). Empty = omitted.
+	* The control's keys are not guessable from its shape, so
+	* hosts are expected to supply their own localized copy.
+	*/
+	hint?: string;
 	/**
 	* Number of body rows the columns occupy. Plugin computes
 	* from its viewport.
@@ -1654,6 +1942,10 @@ type ReplaceResult = {
 	*/
 	bufferId: number;
 };
+type AuthorityPath = {
+	kind: "authority";
+	value: string;
+};
 type AuthorityFilesystem = {
 	kind: "local";
 };
@@ -1740,7 +2032,17 @@ type CreateVirtualBufferInExistingSplitOptions = {
 	*/
 	lineWrap?: boolean;
 	/**
-	* Initial content entries with optional properties
+	* Initial content as **spans, concatenated verbatim** — a span is a run
+	* of text with optional styling, not a line. Nothing inserts newlines
+	* for you, so `[{text:"a"},{text:"b"}]` is the single line `ab`. Include
+	* `\n` yourself — `[{text:"a\n"},{text:"b\n"}]` is two lines.
+	*
+	* If you are an agent putting text in front of a human, prefer writing a
+	* file and opening it (`splitWindow({ file })` /
+	* `openFileInSplit(splitId, path)`): you get syntax highlighting, search,
+	* save, and ANSI escape codes rendered as colour, none of which a virtual
+	* buffer gives you. Virtual buffers are for plugin-owned panels —
+	* ephemeral, styled per span, driven by a mode's keybindings.
 	*/
 	entries?: Array<TextPropertyEntry>;
 	/**
@@ -1796,7 +2098,17 @@ type CreateVirtualBufferInSplitOptions = {
 	*/
 	before?: boolean;
 	/**
-	* Initial content entries with optional properties
+	* Initial content as **spans, concatenated verbatim** — a span is a run
+	* of text with optional styling, not a line. Nothing inserts newlines
+	* for you, so `[{text:"a"},{text:"b"}]` is the single line `ab`. Include
+	* `\n` yourself — `[{text:"a\n"},{text:"b\n"}]` is two lines.
+	*
+	* If you are an agent putting text in front of a human, prefer writing a
+	* file and opening it (`splitWindow({ file })` /
+	* `openFileInSplit(splitId, path)`): you get syntax highlighting, search,
+	* save, and ANSI escape codes rendered as colour, none of which a virtual
+	* buffer gives you. Virtual buffers are for plugin-owned panels —
+	* ephemeral, styled per span, driven by a mode's keybindings.
 	*/
 	entries?: Array<TextPropertyEntry>;
 	/**
@@ -1845,9 +2157,29 @@ type CreateVirtualBufferOptions = {
 	*/
 	hiddenFromTabs?: boolean;
 	/**
-	* Initial content entries with optional properties
+	* Initial content as **spans, concatenated verbatim** — a span is a run
+	* of text with optional styling, not a line. Nothing inserts newlines
+	* for you, so `[{text:"a"},{text:"b"}]` is the single line `ab`. Include
+	* `\n` yourself — `[{text:"a\n"},{text:"b\n"}]` is two lines.
+	*
+	* If you are an agent putting text in front of a human, prefer writing a
+	* file and opening it (`splitWindow({ file })` /
+	* `openFileInSplit(splitId, path)`): you get syntax highlighting, search,
+	* save, and ANSI escape codes rendered as colour, none of which a virtual
+	* buffer gives you. Virtual buffers are for plugin-owned panels —
+	* ephemeral, styled per span, driven by a mode's keybindings.
 	*/
 	entries?: Array<TextPropertyEntry>;
+	/**
+	* Show the new buffer in this existing pane instead of taking over the
+	* focused one.
+	*
+	* Without it the buffer becomes active in whichever pane has focus —
+	* which is what you want for a panel the user just asked for, and
+	* emphatically not what you want when arranging a layout, where it
+	* silently replaces whatever the user was looking at.
+	*/
+	splitId?: number;
 	/**
 	* Initial cursor line (0-indexed). Applied to the new buffer *before*
 	* it becomes the active buffer, so plugins that want to land the
@@ -1931,6 +2263,10 @@ type LanguagePackConfig = {
 	*/
 	formatter: FormatterPackConfig | null;
 };
+type LocalPath = {
+	kind: "local";
+	value: string;
+};
 type LspServerPackConfig = {
 	/**
 	* Command to start the LSP server
@@ -2011,6 +2347,31 @@ type RemoteIndicatorStatePayload = {
 	kind: "disconnected";
 	label?: string | null;
 };
+type ScrollbarMarker = {
+	/**
+	* Byte offset of the marked location. Preferred over `line`.
+	*/
+	position?: number;
+	/**
+	* 0-based logical line number, converted to a byte anchor at set time.
+	* Ignored when `position` is present.
+	*/
+	line?: number;
+	/**
+	* Optional exclusive end byte offset, making this a range marker.
+	*/
+	end?: number;
+	/**
+	* Marker color — RGB array or theme key. Theme keys resolve at render
+	* time, so markers follow theme changes.
+	*/
+	color: OverlayColorSpec;
+	/**
+	* Priority when several markers land on the same track cell (higher
+	* wins). Defaults to 0.
+	*/
+	priority?: number;
+};
 type SpawnResult = {
 	/**
 	* Complete stdout as string
@@ -2046,6 +2407,11 @@ type VirtualBufferResult = {
 	* The split ID (if created in a new split)
 	*/
 	splitId: number | null;
+};
+type WindowPath = {
+	kind: "authority";
+	window: number;
+	value: string;
 };
 /**
 * Main editor API interface
@@ -2162,6 +2528,18 @@ interface EditorAPI {
 	* Execute a built-in action
 	*/
 	executeAction(actionName: string): boolean;
+	/**
+	* Answer a command that was dispatched with a request id (a `RunCommand`
+	* from the agent command channel).
+	* 
+	* Plugins do not normally call this: the host wraps every such dispatch so
+	* that whatever the handler *returns* — or the promise it returns, once it
+	* resolves — becomes the answer, and a throw becomes the failure. Call it
+	* directly only to answer early, or to answer from somewhere other than
+	* the handler's own return path. `output` is the JSON-encoded result the
+	* caller prints; answering an unknown or already-answered id is a no-op.
+	*/
+	completeCommand(requestId: number, ok: boolean, output: string | null, error: string | null): boolean;
 	/**
 	* Cancel the active prompt / overlay — the same teardown the
 	* Escape key triggers. Lets a plugin dismiss a prompt it opened
@@ -2335,7 +2713,7 @@ interface EditorAPI {
 	/**
 	* Open a file in a specific split
 	*/
-	openFileInSplit(splitId: number, path: string, line: number, column: number): boolean;
+	openFileInSplit(splitId: number, path: string, line?: number, column?: number): boolean;
 	/**
 	* Open `path` as a regular buffer in forced large-file (file-backed)
 	* mode. The file is created (empty) if missing — designed for
@@ -2503,42 +2881,63 @@ interface EditorAPI {
 	*/
 	utf8ByteLength(text: string): number;
 	/**
-	* Check if file exists
+	* Check if a file exists on the path's filesystem (a window's authority,
+	* or the local host for a `LocalPath`).
 	*/
-	fileExists(path: string): boolean;
+	fileExists(path: string | LocalPath | WindowPath | AuthorityPath): boolean;
 	/**
-	* Read file contents
+	* Read file contents from the path's filesystem.
 	*/
-	readFile(path: string): string | null;
+	readFile(path: string | LocalPath | WindowPath | AuthorityPath): string | null;
 	/**
-	* Write file contents
+	* Write file contents to the path's filesystem. Parent directories are
+	* created as needed.
 	*/
-	writeFile(path: string, content: string): boolean;
+	writeFile(path: string | LocalPath | WindowPath | AuthorityPath, content: string): boolean;
 	/**
 	* Read directory contents (returns array of {name, is_file, is_dir})
 	*/
-	readDir(path: string): DirEntry[];
+	readDir(path: string | LocalPath | WindowPath | AuthorityPath): DirEntry[];
 	/**
-	* Create a directory (and all parent directories) recursively.
-	* Returns true if the directory was created or already exists.
+	* Create a directory (and all parent directories) recursively on the
+	* path's filesystem. Returns true if the directory was created or already
+	* exists.
 	*/
-	createDir(path: string): boolean;
+	createDir(path: string | LocalPath | WindowPath | AuthorityPath): boolean;
 	/**
-	* Remove a file or directory by moving it to the OS trash/recycle bin.
-	* For safety, the path must be under the OS temp directory or the Fresh
-	* config directory. Returns true on success.
+	* Permanently remove a file or directory on the path's filesystem
+	* (recursively for directories). For safety, the path must be under the OS
+	* temp directory or the Fresh config directory. Returns true on success.
 	*/
-	removePath(path: string): boolean;
+	removePath(path: string | LocalPath | WindowPath | AuthorityPath): boolean;
 	/**
-	* Rename/move a file or directory. Returns true on success.
-	* Falls back to copy then trash for cross-filesystem moves.
+	* Rename/move a file or directory. Both paths must target the same
+	* filesystem (a cross-backend move is rejected). Returns true on success.
 	*/
-	renamePath(from: string, to: string): boolean;
+	renamePath(from: string | LocalPath | WindowPath | AuthorityPath, to: string | LocalPath | WindowPath | AuthorityPath): boolean;
 	/**
-	* Copy a file or directory recursively to a new location.
-	* Returns true on success.
+	* Copy a file or directory recursively to a new location. Both paths must
+	* target the same filesystem. Returns true on success.
 	*/
-	copyPath(from: string, to: string): boolean;
+	copyPath(from: string | LocalPath | WindowPath | AuthorityPath, to: string | LocalPath | WindowPath | AuthorityPath): boolean;
+	/**
+	* Construct a `LocalPath` — a path that always resolves on the local
+	* editor host, regardless of the active window's authority. Use for
+	* editor-owned state under the config/data dirs.
+	*/
+	localPath(path: string): LocalPath;
+	/**
+	* Construct a `WindowPath` — a path that resolves on a specific window's
+	* authority filesystem, regardless of which window is focused.
+	*/
+	windowPath(windowId: number, path: string): WindowPath;
+	/**
+	* Construct an `AuthorityPath` — the active window's authority filesystem,
+	* stated explicitly. Routes identically to passing a bare string, but is
+	* self-documenting: bundled plugins use it so bare strings are reserved as
+	* the backward-compatible default for external plugins.
+	*/
+	authorityPath(path: string): AuthorityPath;
 	/**
 	* Get the OS temporary directory path.
 	*/
@@ -2753,7 +3152,7 @@ interface EditorAPI {
 	/**
 	* Get file stat information
 	*/
-	fileStat(path: string): unknown;
+	fileStat(path: string | LocalPath | WindowPath | AuthorityPath): unknown;
 	/**
 	* Check if a background process is still running
 	*/
@@ -2766,6 +3165,106 @@ interface EditorAPI {
 	* Translate a key for a specific plugin
 	*/
 	pluginTranslate(pluginName: string, key: string, args?: Record<string, unknown>): string;
+	/**
+	* Move a buffer into `splitId`: show it there, and remove its tab from
+	* the pane that held it before.
+	* 
+	* Use this to *rearrange* what is where. `setSplitBuffer` only changes
+	* which of a pane's existing tabs is visible, so building a move out of
+	* it leaves the original tab stranded in its old pane.
+	* 
+	* Queued, like every layout mutation: the returned bool only reports that
+	* the command was sent, not that it took effect, and a read issued right
+	* after it still sees the old state. `await editor.flush()` before
+	* reading back.
+	*/
+	moveBufferToSplit(bufferId: number, splitId: number): boolean;
+	/**
+	* Make lines of a buffer clickable: a click or Enter on a listed line
+	* opens what it points at.
+	* 
+	* ```js
+	* editor.setLineTargets(bufferId, [
+	* { line: 0, path: "src/main.rs", target: 41, into: "code" },
+	* { line: 1, path: "src/lib.rs",  target: 12, into: "code" },
+	* ]);
+	* ```
+	* 
+	* `line` is the row *in this buffer*; `target` is the line to land on in
+	* the file, both 0-indexed. `into` names a pane by its `setSplitLabel`
+	* label; when it names no live pane the target opens beside this one, so
+	* an index never replaces itself with what you clicked.
+	* 
+	* The editor owns the behaviour, which is the point: a script that builds
+	* an index — a search result list, an error list, a review map — exits
+	* immediately, and a `mouse_click` handler would die with it. These
+	* targets keep working.
+	* 
+	* Replaces any previous targets for the buffer; pass `[]` to clear.
+	*/
+	setLineTargets(bufferId: number, targets: LineTarget[]): boolean;
+	/**
+	* Describe the editor as it is right now: the panes of the active
+	* window in visual order with their geometry and contents, which one
+	* has focus, the working directory, and every open workspace.
+	* 
+	* This is the call to start from. It answers "which pane is on the
+	* left", "is that a terminal or a file", and "what am I pointed at"
+	* in one read, instead of stitching `listSplits` + `getBufferInfo` +
+	* `getActiveSplitId` together and still not knowing pane order.
+	* 
+	* Reads the snapshot, so it is cheap and synchronous — but it
+	* observes the state as of the last applied batch. After a mutation,
+	* `await editor.flush()` first (or await the mutation itself, if it
+	* returns a promise) or this reports what was true before it.
+	* 
+	* ```js
+	* const ws = editor.describeWorkspace();
+	* const left = ws.panes[0];               // leftmost pane
+	* const term = ws.panes.find(p => p.kind === "terminal");
+	* ```
+	*/
+	describeWorkspace(): WorkspaceDescription;
+	/**
+	* Split the active pane and resolve with the new pane.
+	* 
+	* This is the primitive for arranging panes. `direction` names the
+	* *divider*: `"vertical"` puts panes side by side (left | right),
+	* `"horizontal"` stacks them (top / bottom). `place` says which side
+	* the new pane lands on — `"before"` is left/top, `"after"` (the
+	* default, and what the keyboard split does) is right/bottom.
+	* 
+	* Resolves *after* the layout has been applied and the readable
+	* snapshot refreshed, with the new pane's id and geometry — so
+	* `listSplits()` / `describeWorkspace()` called next observe the split
+	* that was just made, and "did it land on the left" is answered by the
+	* `x` that comes back rather than by guessing.
+	* 
+	* ```js
+	* // Terminal on the left, README on the right:
+	* const left = await editor.splitWindow({ direction: "vertical", place: "before" });
+	* await editor.createTerminal({ splitId: left.splitId });
+	* ```
+	* 
+	* Rejects when the pane could not be created.
+	*/
+	splitWindow(opts: SplitWindowOptions): Promise<SplitCreated>;
+	/**
+	* Wait for every mutation queued so far to be applied, then resolve.
+	* 
+	* Commands are queued and drained on the editor thread, so a read
+	* issued right after a mutation reports the state from *before* it:
+	* `setSplitRatio(...)` followed by `listSplits()` returns the old
+	* widths. Awaiting this closes that window, which is what lets a
+	* single script change the layout and then verify what it changed.
+	* 
+	* ```js
+	* editor.setSplitRatio(splitId, 0.3);
+	* await editor.flush();
+	* return editor.describeWorkspace();   // reflects the new ratio
+	* ```
+	*/
+	flush(): Promise<void>;
 	/**
 	* Create a composite buffer (async)
 	* 
@@ -2925,22 +3424,8 @@ interface EditorAPI {
 	*/
 	clearSoftBreaksInRange(bufferId: number, start: number, end: number): boolean;
 	/**
-	* Submit a view transform for a buffer/split
-	* 
-	* Accepts tokens in the simple format:
-	* {kind: "text"|"newline"|"space"|"break", text: "...", sourceOffset: N, style?: {...}}
-	* 
-	* Also accepts the TypeScript-defined format for backwards compatibility:
-	* {kind: {Text: "..."} | "Newline" | "Space" | "Break", source_offset: N, style?: {...}}
-	*/
-	submitViewTransform(bufferId: number, splitId: number | null, start: number, end: number, tokens: Record<string, unknown>[], layoutHints?: Record<string, unknown>): boolean;
-	/**
-	* Clear view transform for a buffer/split
-	*/
-	clearViewTransform(bufferId: number, splitId: number | null): boolean;
-	/**
 	* Set layout hints (compose width, column guides) for a buffer/split
-	* without going through the view_transform pipeline.
+	* directly.
 	*/
 	setLayoutHints(bufferId: number, splitId: number | null, hints: LayoutHints): boolean;
 	/**
@@ -3130,15 +3615,35 @@ interface EditorAPI {
 	*/
 	getEditorMode(): string | null;
 	/**
-	* Close a split
+	* Close a split.
+	* 
+	* Queued, like every layout mutation: the returned bool only reports that
+	* the command was sent, not that it took effect, and a read issued right
+	* after it still sees the old state. `await editor.flush()` before
+	* reading back.
 	*/
 	closeSplit(splitId: number): boolean;
 	/**
-	* Set the buffer displayed in a split
+	* Show one of a split's existing tabs. To *move* a buffer into a pane —
+	* and take it out of the pane it was in — use `moveBufferToSplit`.
+	* 
+	* Queued, like every layout mutation: the returned bool only reports that
+	* the command was sent, not that it took effect, and a read issued right
+	* after it still sees the old state. `await editor.flush()` before
+	* reading back.
 	*/
 	setSplitBuffer(splitId: number, bufferId: number): boolean;
 	/**
-	* Focus a specific split
+	* Move focus to a split.
+	* 
+	* To open something without taking focus in the first place, prefer
+	* `splitWindow({ keepFocus: true })` — one call, and the user's cursor
+	* never moves.
+	* 
+	* Queued, like every layout mutation: the returned bool only reports that
+	* the command was sent, not that it took effect, and a read issued right
+	* after it still sees the old state. `await editor.flush()` before
+	* reading back.
 	*/
 	focusSplit(splitId: number): boolean;
 	/**
@@ -3178,6 +3683,16 @@ interface EditorAPI {
 	* the base session (id 1). Logs and no-ops on failure.
 	*/
 	closeWindow(id: number): boolean;
+	/**
+	* Forget a directory's persisted workspace so a permanently deleted
+	* or archived in-place session does not reappear on the next launch.
+	* `closeWindow` only drops the live window — this removes the on-disk
+	* registry file the session discovery would otherwise rediscover.
+	* Call it *after* `closeWindow` for a session whose directory stays
+	* on disk (a worktree-owning session is forgotten by removing its
+	* worktree instead). No-op if nothing is persisted for `root`.
+	*/
+	deleteWorkspace(root: string): boolean;
 	/**
 	* Eagerly initialise an inactive session's per-session state
 	* (file tree walk, ignore matcher, etc.) without diving.
@@ -3230,11 +3745,29 @@ interface EditorAPI {
 	*/
 	activeWindow(): number;
 	/**
-	* Set scroll position of a split
+	* Set the scroll position of a split.
+	* 
+	* Queued, like every layout mutation: the returned bool only reports that
+	* the command was sent, not that it took effect, and a read issued right
+	* after it still sees the old state. `await editor.flush()` before
+	* reading back.
 	*/
 	setSplitScroll(splitId: number, topByte: number): boolean;
 	/**
-	* Set the ratio of a split (0.0 to 1.0, 0.5 = equal)
+	* Resize the split that `split_id` lives in.
+	* 
+	* `split_id` is a leaf id (as returned by `getActiveSplitId`,
+	* `listSplits`, `BufferInfo.splits`, `createTerminal`); the editor
+	* resolves it to its parent split container and sets that container's
+	* ratio, moving the divider between this pane and its sibling. `ratio`
+	* is the fraction of space given to the container's FIRST child
+	* (0.0–1.0, 0.5 = equal), clamped to [0.1, 0.9]. A leaf with no parent
+	* container (the only pane) is a no-op.
+	* 
+	* Queued, like every layout mutation: the returned bool only reports that
+	* the command was sent, not that the resize succeeded, and a read issued
+	* right after it still sees the old widths. `await editor.flush()` before
+	* reading back.
 	*/
 	setSplitRatio(splitId: number, ratio: number): boolean;
 	/**
@@ -3278,6 +3811,34 @@ interface EditorAPI {
 	* Clear line indicators in a namespace
 	*/
 	clearLineIndicators(bufferId: number, namespace: string): boolean;
+	/**
+	* Replace this namespace's scrollbar markers for a buffer.
+	* 
+	* Markers are painted on the vertical scrollbar track at positions
+	* proportional to their location in the buffer, so marked content is
+	* visible at a glance even when it is scrolled off screen. Each marker is
+	* positioned by byte offset (`position`, preferred — it is exact on files
+	* of any size) or by 0-based `line`, optionally spans to `end`, and
+	* carries an RGB triple or a theme key as its `color`.
+	* 
+	* The set is replaced atomically, so a refresh never renders a partially
+	* rebuilt set.
+	*/
+	setScrollbarMarkers(bufferId: number, namespace: string, markers: ScrollbarMarker[]): boolean;
+	/**
+	* Replace only the scrollbar markers currently anchored in
+	* `[start, end)`, leaving this namespace's markers elsewhere in the
+	* buffer untouched.
+	* 
+	* This is the primitive for plugins that decorate the viewport as it
+	* scrolls (a `lines_changed` producer): publish the region you just
+	* scanned without resending — or losing — the rest of the file.
+	*/
+	setScrollbarMarkersInRange(bufferId: number, namespace: string, start: number, end: number, markers: ScrollbarMarker[]): boolean;
+	/**
+	* Remove all scrollbar markers in a namespace
+	*/
+	clearScrollbarMarkers(bufferId: number, namespace: string): boolean;
 	/**
 	* Enable or disable line numbers for a buffer
 	*/
@@ -3454,9 +4015,22 @@ interface EditorAPI {
 	*/
 	setBufferGroupPanelBuffer(groupId: number, panelName: string, bufferId: number): Promise<boolean>;
 	/**
-	* Set virtual buffer content (takes array of entry objects)
+	* Replace a virtual buffer's content with a list of styled **spans**.
 	* 
-	* Note: entries should be TextPropertyEntry[] - uses manual parsing for HashMap support
+	* Spans are concatenated *verbatim*: they are runs of text, not lines,
+	* and nothing inserts separators for you. `[{text:"a"},{text:"b"}]` is
+	* the single line `ab`; for two lines, write `[{text:"a\n"},{text:"b\n"}]`.
+	* A buffer built without those newlines reports a plausible `length` and
+	* a `lineCount` of 1 — read it back from `getBufferInfo` if it matters,
+	* since otherwise the mistake is only visible on screen.
+	* 
+	* If you are an agent putting text in front of a human, prefer writing a
+	* file and opening it (`splitWindow({ file })` /
+	* `openFileInSplit(splitId, path)`). A file buffer gives you syntax
+	* highlighting, search, save, and renders ANSI escape codes as colour —
+	* so command output can go straight in. Virtual buffers exist for
+	* plugin-owned panels: ephemeral, styled per span, driven by a mode's
+	* keybindings.
 	*/
 	setVirtualBufferContent(bufferId: number, entriesArr: Record<string, unknown>[]): boolean;
 	/**
@@ -3508,7 +4082,7 @@ interface EditorAPI {
 	* Mount a declarative widget panel as a centered floating
 	* overlay (not bound to any virtual buffer).
 	*/
-	mountFloatingWidget(panelId: number, specObj: unknown, widthPct: number, heightPct: number, asDock?: boolean, focusMarker?: boolean): boolean;
+	mountFloatingWidget(panelId: number, specObj: unknown, widthPct: number, heightPct: number, asDock?: boolean, focusMarker?: boolean, title?: string, closable?: boolean, startBlurred?: boolean): boolean;
 	/**
 	* Replace the spec of the currently-mounted floating widget panel.
 	*/
@@ -3637,9 +4211,16 @@ interface EditorAPI {
 	*/
 	spawnProcessWait(processId: number): Promise<SpawnResult>;
 	/**
-	* Get buffer text range (async, returns request_id)
+	* Read buffer text.
+	* 
+	* `getBufferText(id)` returns the **whole buffer** — the common case,
+	* and the one that used to require reading `length` from
+	* `getBufferInfo` and passing it back. `getBufferText(id, start, end)`
+	* still reads a byte range, so existing callers are unaffected.
+	* 
+	* Byte offsets, not character or line offsets.
 	*/
-	getBufferText(bufferId: number, start: number, end: number): Promise<string>;
+	getBufferText(bufferId: number, start?: number, end?: number): Promise<string>;
 	/**
 	* Delay/sleep (async, returns request_id)
 	*/
@@ -3801,6 +4382,19 @@ interface HookEventMap {
 	trust_changed: {
 		level: "trusted" | "restricted" | "blocked";
 	};
+	/**
+	* The effective config changed — the user saved from the Settings UI,
+	* or the config was reloaded from disk. Payload-free by design:
+	* re-read what you care about with `editor.getPluginConfig()` /
+	* `editor.getConfig()`, both of which already reflect the new values
+	* when the handler runs.
+	*
+	* Any plugin that caches a `defineConfigX` value (rather than reading
+	* it at point of use) should subscribe, or its setting will appear to
+	* do nothing until the editor restarts. Does not fire for the
+	* plugin's own `editor.setSetting(...)` writes.
+	*/
+	config_changed: Record<string, never>;
 	// ── buffer lifecycle ─────────────────────────────────────────────────────
 	buffer_activated: {
 		buffer_id: number;
@@ -3909,14 +4503,6 @@ interface HookEventMap {
 		* coordinate-mapping APIs to repair stale offsets from this batch. */
 		epoch: number;
 	};
-	view_transform_request: {
-		buffer_id: number;
-		split_id: number;
-		viewport_start: number;
-		viewport_end: number;
-		tokens: ViewTokenWire[];
-		cursor_positions: number[];
-	};
 	// ── commands ─────────────────────────────────────────────────────────────
 	pre_command: {
 		action: string | Record<string, unknown>;
@@ -3924,6 +4510,14 @@ interface HookEventMap {
 	post_command: {
 		action: string | Record<string, unknown>;
 	};
+	/**
+	* NOT EMITTED. Declared here historically, but nothing in the editor ever
+	* fires it: `editor.on("idle", ...)` registers successfully and the handler
+	* is never called. Listed so that its absence is documented rather than
+	* discovered — do not build on it. For "run something later", drive it from
+	* an event that does fire (`cursor_moved`, `buffer_changed`) or from your
+	* own `spawnProcess` timer.
+	*/
 	idle: {
 		milliseconds: number;
 	};

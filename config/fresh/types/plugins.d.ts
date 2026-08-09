@@ -21,19 +21,48 @@ export type DashboardTextOpts = {
 	*  first `onClick` emitted wins. */
 	onClick?: () => void;
 };
+/** One cell in a [`DashboardContext.columns`] row. Cells are clipped to
+*  `width` (or their natural width when omitted) so a long value can never
+*  push the columns to its right out of alignment. */
+export type DashboardCell = DashboardTextOpts & {
+	text: string;
+	/** Column width in cells. Omit for "as wide as the text". */
+	width?: number;
+	/** Right-align inside `width`. Default left. */
+	align?: "left" | "right";
+};
 export type DashboardContext = {
+	/** Inner panel width in columns. Sections should lay out to this — rows
+	*  wider than it are clipped by the frame renderer, so anything past it
+	*  is not merely ugly, it is invisible. */
+	readonly width: number;
 	/** Emit a label/value row like "    label     value". The label
-	*  column is padded to 10 cols so multi-row sections align. */
+	*  column is padded to 10 cols so multi-row sections align, and the
+	*  value is clipped to the remaining panel width. */
 	kv(label: string, value: string, color?: DashboardColor): void;
 	/** Emit a styled text segment on the current row. No newline is
 	*  added — call `newline()` when the row is finished. */
 	text(s: string, opts?: DashboardTextOpts): void;
+	/** Emit a whole row of fixed-width cells and end it. Each cell is
+	*  clipped to its own width, and the row as a whole is clipped to
+	*  `width`, so a column layout stays aligned at any panel size. */
+	columns(cells: DashboardCell[]): void;
 	/** End the current row. */
 	newline(): void;
 	/** Shortcut for a single-row error message: "    status    why". */
 	error(message: string): void;
 };
 export type SectionRefresh = (ctx: DashboardContext) => Promise<void>;
+/** Per-section refresh policy. Defaults keep an idle dashboard cheap: a
+*  section is re-run only once its data is older than `ttlMs`, and a refresh
+*  that overruns `timeoutMs` is abandoned rather than blocking the section
+*  (or the panel) indefinitely. */
+export type SectionOptions = {
+	/** Minimum age before a refresh is re-run. Default 30s, floor 1s. */
+	ttlMs?: number;
+	/** Abandon a refresh that takes longer than this. Default 8s. */
+	timeoutMs?: number;
+};
 /**
 * Public surface of the bundled `dashboard` plugin, reachable through
 * `editor.getPluginApi("dashboard")`. Third-party plugins and user
@@ -41,7 +70,7 @@ export type SectionRefresh = (ctx: DashboardContext) => Promise<void>;
 * tear them down again via `removeSection` / `clearAllSections`.
 */
 export type DashboardApi = {
-	registerSection(name: string, refresh: SectionRefresh): () => void;
+	registerSection(name: string, refresh: SectionRefresh, options?: SectionOptions): () => void;
 	/** Remove every registered section whose name matches `name`.
 	*  Returns true if at least one section was removed. */
 	removeSection(name: string): boolean;
@@ -160,6 +189,97 @@ declare global {
 	}
 }
 export {};
+
+// ── orchestrator ─────────────────────
+export type AgentLaunchResult = {
+	workspaceId: string;
+	windowId: number;
+	root: string;
+};
+export type RunAgentOptions = {
+	/** Agent command line, e.g. `claude` or `claude --model opus`. A bare
+	*  terminal when empty or omitted. */
+	agent?: string;
+	/** Initial prompt handed to the agent at launch (agents that accept one). */
+	prompt?: string;
+	/** Run the agent in its reduced-approval mode. Default false. Ignored for an
+	*  agent whose registry entry has no such mode. */
+	auto?: boolean;
+	/** Inject the Fresh system prompt so the agent knows it can drive the editor.
+	*  Default true. */
+	teach?: boolean;
+};
+export type NewWorkspaceOptions = RunAgentOptions & {
+	/** Project directory the workspace roots at. Default: this workspace's
+	*  project. Must exist. */
+	path?: string;
+	/** Workspace name. Default: the next auto-generated `<project>-N`. */
+	name?: string;
+	/** Existing branch to check out in the new worktree. Default: the repo's
+	*  default branch. */
+	branch?: string;
+	/** Create the worktree on a new branch of this name, cut from `branch`. */
+	newBranch?: string;
+	/** Create a git worktree for the workspace. Default true; ignored for a
+	*  non-git path. */
+	worktree?: boolean;
+	/** Move focus into the new workspace once it is up. Default false — an agent
+	*  asking for a workspace should not yank the human's focus into it. */
+	visit?: boolean;
+};
+export type WorkspaceSummary = {
+	/** Durable identity — survives editor restarts. Record this one. */
+	workspaceId: string;
+	/** Per-process window id; valid only for this editor run. */
+	windowId: number;
+	/** Display name shown on the dock. */
+	name: string;
+	/** Filesystem root (the worktree, for a worktree workspace). */
+	root: string;
+	/** The project this workspace was cut from. */
+	projectPath: string;
+	/** Checked-out branch, when known. */
+	branch?: string;
+	/** Whether the agent in this workspace is producing output right now. */
+	agentState: "working" | "idle";
+	/** Terminal tab title — in practice the agent's command line, since the
+	*  launcher titles the tab with it. Empty when the pane has no title. */
+	title: string;
+	/** Working-tree summary, when a git probe has completed. `dirty` counts
+	*  changed paths; `ahead`/`behind` are relative to the upstream. */
+	git?: {
+		branch?: string;
+		dirty?: number;
+		ahead?: number;
+		behind?: number;
+	};
+	/** Backend kind for a remote workspace (`ssh`, `docker`, …), absent for
+	*  a local one. */
+	backend?: string;
+};
+export type OrchestratorApi = {
+	/** Launch a coding agent in THIS workspace — the headless twin of the
+	*  "Run Agent…" dialog. Resolves once the agent's terminal is up. */
+	runAgent(options?: RunAgentOptions): Promise<AgentLaunchResult>;
+	/** Create a workspace (a git worktree by default) and launch a coding agent
+	*  in it — the headless twin of the "New Workspace" dialog.
+	*
+	*  Unlike the dialog, which returns to the user immediately and reports
+	*  progress on the dock, this waits for the create to finish: a caller has no
+	*  dock to watch, the durable workspace id does not exist until the window is
+	*  born, and waiting is what lets a failed create reject rather than
+	*  silently do nothing. */
+	newWorkspace(options?: NewWorkspaceOptions): Promise<AgentLaunchResult>;
+	/** Every workspace the dock is tracking, in dock order — what a caller
+	*  needs to find the one it made earlier, or to report on all of them.
+	*  Reads the live model, so it reflects creations made moments ago. */
+	listWorkspaces(): WorkspaceSummary[];
+};
+declare global {
+	interface FreshPluginRegistry {
+		orchestrator: OrchestratorApi;
+	}
+}
 
 // ── vi_mode ─────────────────────
 export type ViModeApi = {
