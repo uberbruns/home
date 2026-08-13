@@ -2,4 +2,5 @@
 gh = "latest"
 lazygit = "latest"
 ripgrep = "latest"
+"npm:hunkdiff" = "latest"
 "pipx:platformio" = "latest"

@@ -3,8 +3,8 @@
 #==================================================
 
 test -d ~/.rd/bin && fish_add_path ~/.rd/bin
+fish_add_path ~/.home/bin
 fish_add_path ~/.home/cache/npm-global/bin
-fish_add_path ~/.home/cache/uv-bin
 fish_add_path ~/.local/bin
 fish_add_path /opt/homebrew/bin
 
@@ -93,7 +93,4 @@ end
 
 
 if test -d ~/.rd/bin
-### MANAGED BY RANCHER DESKTOP START (DO NOT EDIT)
-set --export --prepend PATH "/Users/karsten/.rd/bin"
-### MANAGED BY RANCHER DESKTOP END (DO NOT EDIT)
 end

@@ -32,7 +32,7 @@ Ghostty terminal emulator configuration with Fish shell, Starship prompt, fzf.fi
 
 Configurations are symlinked from this repository to system locations. `home.toml` defines source-to-target mappings with optional labels; `config.toml` declares the machine's active labels.
 
-**Relevant Files:** [home.toml](home.toml), [bin/home.py](bin/home.py)
+**Relevant Files:** [home.toml](home.toml), [bin/home](bin/home), [bin/home_cli.py](bin/home_cli.py)
 
 #### Commands
 

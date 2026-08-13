@@ -51,7 +51,7 @@ def main():
       discard  - Discard all local changes and untracked files
       update   - Pull, run mise install, and reload fish shell
     """
-    parser = argparse.ArgumentParser(description="Home configuration management tool")
+    parser = argparse.ArgumentParser(prog="home", description="Home configuration management tool")
     parser.add_argument("command", choices=COMMANDS, help="command to execute")
     parser.add_argument("--dry-run", action="store_true",
                         help="print actions without executing them")

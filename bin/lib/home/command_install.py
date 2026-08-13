@@ -4,7 +4,6 @@
 # Imports
 # ============================================================
 
-import os
 import shutil
 import subprocess
 
@@ -30,7 +29,6 @@ def execute_install(config: Config) -> None:
     execute_link(config)
     install_mise_tools()
     install_herdr_plugins(config)
-    install_home_scripts()
     reload_fish_shell()
 
 
@@ -39,7 +37,6 @@ def execute_install_without_reload(config: Config) -> None:
     execute_link(config)
     install_mise_tools()
     install_herdr_plugins(config)
-    install_home_scripts()
 
 
 # ============================================================
@@ -70,16 +67,6 @@ def install_herdr_plugins(config: Config) -> None:
         subprocess.run(["herdr", "plugin", "install", plugin["source"], "--yes"], check=True)
 
     print_success("herdr plugin install complete")
-
-
-def install_home_scripts() -> None:
-    """Install home-bin scripts as uv tools."""
-    print_header("Installing scripts")
-
-    bin_dir = os.path.join(os.path.dirname(__file__), '..', '..')
-    subprocess.run(['uv', 'tool', 'install', '--editable', bin_dir], check=True)
-
-    print_success("uv tool install complete")
 
 
 # ============================================================

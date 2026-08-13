@@ -42,5 +42,4 @@ esac
 mkdir -p ~/.cache
 mise trust --yes --silent --all
 mise install
-mise exec -- uv tool install --editable --force ~/.home/bin
-~/.home/bin/home_cli.py update
+~/.home/bin/home update
