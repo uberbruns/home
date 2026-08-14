@@ -20,6 +20,13 @@ labels = ["linux", "cli"]
 target = "~/.config/gram"
 labels = [["macos", "linux"], ["cli", "dev"]]
 
+# The hunk directory also holds a machine-local state.json, so this entry links
+# the configuration file on its own rather than the whole directory.
+[[hunk]]
+source = "config/hunk/config.toml"
+target = "~/.config/hunk/config.toml"
+labels = [["macos", "linux"], "dev"]
+
 [[mise]]
 source = "config/mise/main.toml"
 target = "~/.config/mise.toml"

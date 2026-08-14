@@ -1,0 +1,360 @@
+theme = "aura-dark"
+mode = "stack"
+line_numbers = true
+wrap_lines = false
+hunk_headers = true
+menu_bar = true
+agent_notes = false
+copy_decorations = false
+cursor_line = "row"
+
+
+# Aura Dark, ported from daltonmenezes/aura-theme.
+#
+# The surface colors come from packages/vscode/themes/aura-dark-color-theme.json.
+# The base is github-dark-default because its default (unscoped) token color
+# #e6edf3 is the closest bundled match to Aura's foreground #edecee, and
+# syntax_scopes cannot override a base theme's unscoped default rule.
+#
+# Aura expresses its diff backgrounds with alpha (#00d89023, #ff474720), which
+# hunk rejects. Each value below is that color composited over the editor
+# background #15141b.
+[themes.aura-dark]
+base = "github-dark-default"
+label = "Aura Dark"
+
+# Chrome surfaces: editor.background, sideBar.background,
+# list.activeSelectionBackground, dropdown.border.
+background = "#15141b"
+panel = "#110f18"
+panelAlt = "#2e2b38"
+border = "#3b334b"
+
+# accent1 drives Aura's cursor, badges, and active-selection foreground.
+# accentMuted is accent22, which Aura uses for inactive slider surfaces.
+accent = "#a277ff"
+accentMuted = "#4d466e"
+text = "#edecee"
+muted = "#adacae"
+
+# Row tints, then the stronger content tints applied inside changed regions.
+addedBg = "#122f2b"
+removedBg = "#321a21"
+addedContentBg = "#104739"
+removedContentBg = "#522126"
+
+# Aura has no moved-line color, so both moved tints reuse its modified color
+# #ffca85 from editorGutter.modifiedBackground.
+movedAddedBg = "#362d2a"
+movedRemovedBg = "#362d2a"
+
+# Context rows stay on the plain editor background, matching Aura's editor.
+contextBg = "#15141b"
+contextContentBg = "#15141b"
+
+# Gutter marker colors are Aura's editorGutter added and deleted backgrounds.
+addedSignColor = "#61ffca"
+removedSignColor = "#ff6767"
+
+# Aura's editorLineNumber.foreground #a394f033 composites to #312e46, which is
+# unreadable as a foreground. This keeps that hue at a legible luminance.
+lineNumberBg = "#15141b"
+lineNumberFg = "#877ac5"
+
+# hunk blends selectedHunk over each row background, so this is Aura's
+# primary-selection color with its alpha channel dropped.
+selectedHunk = "#3d375e"
+
+badgeAdded = "#61ffca"
+badgeRemoved = "#ff6767"
+badgeNeutral = "#adacae"
+
+# File status colors follow Aura's gitDecoration entries. Aura defines no
+# renamed color, so fileRenamed uses accent32 to stay distinct from modified.
+fileNew = "#61ffca"
+fileDeleted = "#ff6767"
+fileRenamed = "#82e2ff"
+fileModified = "#ffca85"
+fileUntracked = "#61ffca"
+
+noteBorder = "#a277ff"
+noteBackground = "#211d26"
+noteTitleBackground = "#2e2b38"
+noteTitleText = "#edecee"
+
+# Shiki/TextMate scopes.
+#
+# Declaration order matters: equally specific rules resolve last-wins, and a
+# more specific selector in github-dark-default beats a broader override here.
+# Each group therefore lists its broad selectors first, and every specific
+# selector the base theme defines is repeated explicitly so nothing inherits a
+# GitHub color.
+[themes.aura-dark.syntax_scopes]
+
+# accent7 as the root fallback. The base theme's default rule carries no scope,
+# so no override can replace it; these two root selectors claim every token the
+# grammars leave otherwise unscoped, which is what keeps GitHub's #e6edf3 out of
+# whitespace and bare identifiers. Both are the least specific selectors in the
+# table, so every rule below still wins over them.
+"source" = "#edecee"
+"text" = "#edecee"
+
+# accent8 — comments and diff metadata.
+"comment" = "#6d6d6d"
+"comment.line" = "#6d6d6d"
+"comment.line.double-slash" = "#6d6d6d"
+"comment.line.number-sign" = "#6d6d6d"
+"comment.block" = "#6d6d6d"
+"punctuation.definition.comment" = "#6d6d6d"
+"string.comment" = "#6d6d6d"
+"string.quoted.docstring.multi.python" = "#6d6d6d"
+"meta.diff" = "#6d6d6d"
+"meta.diff.header" = "#6d6d6d"
+"source.diff" = "#6d6d6d"
+"meta.separator" = "#6d6d6d"
+"markup.ignored" = "#6d6d6d"
+"markup.untracked" = "#6d6d6d"
+# Aura colors documentation comments with accent1 rather than the comment gray.
+"comment.block.documentation" = "#a277ff"
+
+# accent1 — keywords, storage, support, and tags.
+"keyword" = "#a277ff"
+"keyword.control" = "#a277ff"
+"keyword.control.flow" = "#a277ff"
+"keyword.control.import" = "#a277ff"
+"keyword.control.export" = "#a277ff"
+"keyword.control.conditional" = "#a277ff"
+"keyword.control.at-rule" = "#a277ff"
+"keyword.declaration" = "#a277ff"
+"keyword.operator" = "#a277ff"
+"keyword.operator.new" = "#a277ff"
+"keyword.operator.logical" = "#a277ff"
+"keyword.operator.arithmetic" = "#a277ff"
+"keyword.operator.assignment" = "#a277ff"
+"keyword.operator.comparison" = "#a277ff"
+"keyword.operator.expression" = "#a277ff"
+"keyword.operator.accessor" = "#a277ff"
+"keyword.other" = "#a277ff"
+"keyword.other.unit" = "#a277ff"
+"storage" = "#a277ff"
+"storage.type" = "#a277ff"
+"storage.type.function" = "#a277ff"
+"storage.type.class" = "#a277ff"
+"storage.modifier" = "#a277ff"
+"support" = "#a277ff"
+"support.type" = "#a277ff"
+"support.other" = "#a277ff"
+"entity.name.tag" = "#a277ff"
+"entity.name.tag.html" = "#a277ff"
+"entity.name.tag.yaml" = "#a277ff"
+"variable.language" = "#a277ff"
+"variable.language.this" = "#a277ff"
+"variable.other.env" = "#a277ff"
+"entity.other.keyframe-offset" = "#a277ff"
+"constant.length.units.css" = "#a277ff"
+"constant.percentage.units.css" = "#a277ff"
+"markup.heading" = "#a277ff"
+"markup.heading entity.name" = "#a277ff"
+"markup.underline.link" = "#a277ff"
+"markup.quote" = "#a277ff"
+"punctuation.definition.markdown" = "#a277ff"
+"punctuation.definition.list.begin.markdown" = "#a277ff"
+"punctuation.definition.bold.markdown" = "#a277ff"
+"punctuation.definition.italic.markdown" = "#a277ff"
+"punctuation.definition.quote.begin.markdown" = "#a277ff"
+"punctuation.definition.raw.markdown" = "#a277ff"
+"punctuation.definition.keyword" = "#a277ff"
+"token.debug-token" = "#a277ff"
+
+# accent2 — strings, constants, and numbers.
+"string" = "#61ffca"
+"string.quoted" = "#61ffca"
+"string.quoted.single" = "#61ffca"
+"string.quoted.double" = "#61ffca"
+"string.quoted.triple" = "#61ffca"
+"string.template" = "#61ffca"
+"string.interpolated" = "#61ffca"
+"string.unquoted.plain.out.yaml" = "#61ffca"
+"string.regexp" = "#61ffca"
+"source.regexp" = "#61ffca"
+"string.regexp.character-class" = "#61ffca"
+"string.regexp constant.character.escape" = "#61ffca"
+"string.regexp source.ruby.embedded" = "#61ffca"
+"string.regexp string.regexp.arbitrary-repitition" = "#61ffca"
+"string punctuation.section.embedded source" = "#61ffca"
+"punctuation.definition.string" = "#61ffca"
+"punctuation.definition.string.begin" = "#61ffca"
+"punctuation.definition.string.end" = "#61ffca"
+"constant" = "#61ffca"
+"constant.numeric" = "#61ffca"
+"constant.numeric.integer" = "#61ffca"
+"constant.numeric.float" = "#61ffca"
+"constant.numeric.hex" = "#61ffca"
+"constant.language" = "#61ffca"
+"constant.language.boolean" = "#61ffca"
+"constant.language.null" = "#61ffca"
+"constant.language.undefined" = "#61ffca"
+"constant.character" = "#61ffca"
+"constant.character.escape" = "#61ffca"
+"constant.character.entity" = "#61ffca"
+"constant.other" = "#61ffca"
+"constant.other.placeholder" = "#61ffca"
+"constant.other.reference.link" = "#61ffca"
+"string.other.link" = "#61ffca"
+"string.other.link.title.markdown" = "#61ffca"
+"markup.inserted" = "#61ffca"
+"meta.diff.header.to-file" = "#61ffca"
+"punctuation.definition.inserted" = "#61ffca"
+"markup.raw" = "#61ffca"
+"markup.inline.raw" = "#61ffca"
+"markup.inline.raw.string.markdown" = "#61ffca"
+"markup.fenced_code" = "#61ffca"
+"support.type.builtin.graphql" = "#61ffca"
+"variable.other.quoted.double" = "#61ffca"
+"entity.other.attribute-name.id.css" = "#61ffca"
+
+# accent3 and accent31 — functions, entities, and changed markup.
+"entity" = "#ffca85"
+"entity.name" = "#ffca85"
+"entity.name.function" = "#ffca85"
+"entity.name.function.member" = "#ffca85"
+"entity.name.function.elixir" = "#ffca85"
+"entity.name.function-call.elixir" = "#ffca85"
+"entity.name.section" = "#ffca85"
+"entity.name.section.markdown" = "#ffca85"
+"entity.name.label" = "#ffca85"
+"support.function" = "#ffca85"
+"support.function.builtin" = "#ffca85"
+"support.function.magic.python" = "#ffca85"
+"meta.function-call" = "#ffca85"
+"meta.function-call.generic" = "#ffca85"
+"meta.function-call.generic.python" = "#ffca85"
+"variable.function" = "#ffca85"
+"support.class.component" = "#ffca85"
+"support.class.component.tsx" = "#ffca85"
+"support.class.component.open.jsx" = "#ffca85"
+"support.class.component.close.jsx" = "#ffca85"
+"meta.export.default" = "#ffca85"
+"meta.definition.variable" = "#ffca85"
+"storage.type.annotation.dart" = "#ffca85"
+"markup.changed" = "#ffca85"
+"punctuation.definition.changed" = "#ffca85"
+"meta.diff.range" = "#ffca85"
+"token.warn-token" = "#ffca85"
+
+# accent5 — errors and deletions.
+"invalid" = "#ff6767"
+"invalid.broken" = "#ff6767"
+"invalid.deprecated" = "#ff6767"
+"invalid.illegal" = "#ff6767"
+"invalid.unimplemented" = "#ff6767"
+"message.error" = "#ff6767"
+"carriage-return" = "#ff6767"
+"brackethighlighter.unmatched" = "#ff6767"
+"markup.deleted" = "#ff6767"
+"meta.diff.header.from-file" = "#ff6767"
+"punctuation.definition.deleted" = "#ff6767"
+"token.error-token" = "#ff6767"
+
+# accent6 — properties, attributes, and separators.
+"entity.other.attribute-name" = "#f694ff"
+"entity.other.attribute-name.html" = "#f694ff"
+"entity.other.attribute-name.id" = "#f694ff"
+"meta.object-literal.key" = "#f694ff"
+"meta.object.member" = "#f694ff"
+"meta.property-name" = "#f694ff"
+"variable.object.property" = "#f694ff"
+"variable.other.property" = "#f694ff"
+"variable.other.object.property" = "#f694ff"
+"variable.other.constant.property" = "#f694ff"
+"support.type.property-name" = "#f694ff"
+"support.type.property-name.css" = "#f694ff"
+"support.type.property-name.json" = "#f694ff"
+"support.type.property-name.toml" = "#f694ff"
+"support.type.vendored" = "#f694ff"
+"meta.type.annotation" = "#f694ff"
+"string.unquoted" = "#f694ff"
+"punctuation.separator" = "#f694ff"
+"punctuation.separator.key-value" = "#f694ff"
+"punctuation.delimiter" = "#f694ff"
+"constant.language.symbol.elixir" = "#f694ff"
+"variable.graphql" = "#f694ff"
+"meta.attribute.python" = "#f694ff"
+"source.dart" = "#f694ff"
+
+# accent32 — types, classes, and template-expression delimiters.
+"entity.name.type" = "#82e2ff"
+"entity.name.type.class" = "#82e2ff"
+"entity.name.type.interface" = "#82e2ff"
+"entity.name.type.enum" = "#82e2ff"
+"entity.name.class" = "#82e2ff"
+"entity.name.namespace" = "#82e2ff"
+"entity.name.scope-resolution" = "#82e2ff"
+"entity.other.inherited-class" = "#82e2ff"
+"support.class" = "#82e2ff"
+"support.class.builtin" = "#82e2ff"
+"support.class.dart" = "#82e2ff"
+"support.constant" = "#82e2ff"
+"support.variable" = "#82e2ff"
+"entity.name.constant" = "#82e2ff"
+"variable.other.constant" = "#82e2ff"
+"variable.other.enummember" = "#82e2ff"
+"variable.other.constant.elixir" = "#82e2ff"
+"entity.other.attribute-name.class.css" = "#82e2ff"
+"meta.module-reference" = "#82e2ff"
+"punctuation.definition.template-expression" = "#82e2ff"
+"punctuation.definition.template-expression.begin" = "#82e2ff"
+"punctuation.definition.template-expression.end" = "#82e2ff"
+"punctuation.quasi.element.begin" = "#82e2ff"
+"punctuation.quasi.element.end" = "#82e2ff"
+"token.info-token" = "#82e2ff"
+
+# accent7 — variables, punctuation, and neutral structural tokens.
+"variable" = "#edecee"
+"variable.other" = "#edecee"
+"variable.other.readwrite" = "#edecee"
+"variable.other.object" = "#edecee"
+"variable.parameter" = "#edecee"
+"variable.parameter.function" = "#edecee"
+"parameter.variable.function.elixir" = "#edecee"
+"punctuation" = "#edecee"
+"punctuation.accessor" = "#edecee"
+"punctuation.definition.tag" = "#edecee"
+"punctuation.definition.entity" = "#edecee"
+"punctuation.definition.parameters" = "#edecee"
+"punctuation.definition.arguments" = "#edecee"
+"punctuation.section" = "#edecee"
+"punctuation.section.embedded" = "#edecee"
+"punctuation.terminator" = "#edecee"
+"punctuation.terminator.dart" = "#edecee"
+"punctuation.dot.dart" = "#edecee"
+"meta.brace" = "#edecee"
+"meta.block" = "#edecee"
+"meta.embedded" = "#edecee"
+"meta.embedded.expression" = "#edecee"
+"meta.template.expression" = "#edecee"
+"meta.jsx.children" = "#edecee"
+"meta.tag.attributes" = "#edecee"
+"meta.class" = "#edecee"
+"meta.method.declaration" = "#edecee"
+"storage.modifier.package" = "#edecee"
+"storage.modifier.import" = "#edecee"
+"storage.type.java" = "#edecee"
+"markup.list" = "#edecee"
+"markup.list.numbered" = "#edecee"
+"markup.list.unnumbered" = "#edecee"
+"markup.italic" = "#edecee"
+"markup.bold" = "#edecee"
+"source.css" = "#edecee"
+"support.constant.property-value.css" = "#edecee"
+"support.constant.font-name" = "#edecee"
+"support.constant.vendored.property-value" = "#edecee"
+"variable.parameter.keyframe-list.css" = "#edecee"
+"entity.other.attribute-name.parent-selector" = "#edecee"
+"meta.output" = "#adacae"
+"brackethighlighter.tag" = "#6d6d6d"
+"brackethighlighter.curly" = "#6d6d6d"
+"brackethighlighter.round" = "#6d6d6d"
+"brackethighlighter.square" = "#6d6d6d"
+"brackethighlighter.angle" = "#6d6d6d"
+"brackethighlighter.quote" = "#6d6d6d"
